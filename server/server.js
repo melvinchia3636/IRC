@@ -34,7 +34,16 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     io.emit("message", `${username} [${user}] left the chat`, "SYSTEM", new Number(new Date()) / 1000);
+    io.emit("stopTyping", user);
     console.log(`${user} left the chat`);
+  })
+
+  socket.on("typing", (ip, nickname) => {
+    io.emit("typing", ip, nickname);
+  });
+
+  socket.on("stopTyping", (ip) => {
+    io.emit("stopTyping", ip);
   })
 });
 
