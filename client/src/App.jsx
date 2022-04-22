@@ -29,7 +29,7 @@ function App() {
 
   useEffect(() => {
     if (ip && nickname) {
-      const socket = io('http://147.158.206.247:3001/');
+      const socket = io('http://147.158.242.231:3001/');
       setSocket(socket);
 
       socket.on('connect', () => {
@@ -124,9 +124,14 @@ function App() {
             )}
           </div>
         ))}</div>
-        <form onSubmit={sendMessage}>
-          <input type="text" value={message} placeholder="Please enter your message" onChange={e => setMessage(e.target.value)} className="border-2 border-[#20C20E] placeholder-[#20C20E] focus:outline-none bg-transparent w-full mt-4 p-4 px-5 [caret-shape:underscore]" />
-        </form>
+        <div className="flex items-center gap-6 w-full mt-4 border-2 border-[#20C20E]">
+          <form onSubmit={sendMessage} className="flex-1" id="message">
+            <input type="text" value={message} placeholder="Please enter your message" onChange={e => setMessage(e.target.value)} className="placeholder-[#20C20E] focus:outline-none bg-transparent w-full p-4 pl-5 [caret-shape:underscore]" />
+          </form>
+          <button type="submit" form="message">
+            <Icon icon="ic:round-send" className='w-8 h-8 mr-3' />
+          </button>
+        </div>
       </div>
     </div>
   )
