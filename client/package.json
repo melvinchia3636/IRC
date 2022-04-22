@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@iconify/react": "^3.2.1",
     "autoprefixer": "^10.4.4",
     "axios": "^0.26.1",
     "moment": "^2.29.3",

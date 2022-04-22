@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import axios from "axios";
 import publicIp from 'public-ip';
 import alertSound from "./alert.mp3";
-import useSound from 'use-sound';
 import moment from "moment";
+import { Icon } from "@iconify/react";
 
 function App() {
   const [_messageList, _setMessageList] = useState([]);
@@ -12,6 +11,7 @@ function App() {
   const [message, setMessage] = useState('');
   const [socket, setSocket] = useState();
   const [ip, setIP] = useState('');
+  const [nickname, setNickname] = useState(localStorage.getItem("nickname") || 'Anonymous');
 
   const setMessageList = (msgl) => {
     messageList.current = msgl;
@@ -28,17 +28,16 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (ip) {
+    if (ip && nickname) {
       const socket = io('http://147.158.206.247:3001/');
       setSocket(socket);
 
       socket.on('connect', () => {
-        socket.emit("connected", ip)
+        socket.emit("connected", ip, nickname)
       });
 
-      socket.on('message', (message, ip, date) => {
+      socket.on('message', (message, ip, date, nickname) => {
         let newMessageList = [...messageList.current];
-        console.log(date, newMessageList[newMessageList.length - 1]?.date)
         if (newMessageList[newMessageList.length - 1]?._ip === ip && date - newMessageList[newMessageList.length - 1]?.date < 60) {
           newMessageList[newMessageList.length - 1].message = [
             ...newMessageList[newMessageList.length - 1].message,
@@ -48,7 +47,8 @@ function App() {
           newMessageList.push({
             message: [message],
             _ip: ip,
-            date: date
+            date: date,
+            nickname: nickname
           });
         }
         setMessageList(newMessageList);
@@ -56,42 +56,78 @@ function App() {
         setTimeout(() => {
           document.getElementById("messagebox").scrollTop = document.getElementById("messagebox").scrollHeight;
         }, 100);
+
         new Audio(alertSound).play()
       });
+
+      return () => socket.close()
     }
   }, [ip])
 
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim()) {
-      socket.emit('message', message.trim(), ip, new Number(new Date()) / 1000);
+      if (message.startsWith("/")) {
+        if (message.startsWith("/clear")) {
+          setMessageList([
+            {
+              "message": [
+                "Messages have been cleared"
+              ],
+              "_ip": "SYSTEM",
+              "date": new Number(new Date()) / 1000,
+            }
+          ])
+        } else if (message.startsWith("/nick")) {
+          const newNickname = message.split(" ")[1];
+          if (newNickname) {
+            localStorage.setItem("nickname", newNickname);
+            setNickname(newNickname);
+            socket.emit("nickname", newNickname);
+          }
+        }
+      } else {
+        socket.emit('message', message.trim(), ip, new Number(new Date()) / 1000);
+      }
+
+      setTimeout(() => {
+        document.getElementById("messagebox").scrollTop = document.getElementById("messagebox").scrollHeight;
+      }, 100);
+
       setMessage('');
     }
   }
 
   return (
-    <div className="App w-full h-full flex flex-col p-8 bg-black text-green-500 font-['Jetbrains_Mono']">
-      <h1 className="font-bold text-xl mb-4">NICE IRC v0.3</h1>
-      <div className="flex-1 overflow-y-auto" id="messagebox">{_messageList.map(({_ip, message, date}) => (
-        <div className={`w-full flex ${ip === _ip ? "justify-end" : "justify-start"}`}>
-          <div className="my-4 selection:bg-neutral-900 selection:text-green-500 relative animate__animated flex flex-col w-auto md:max-w-[50%]">
-            <div className={`inline-flex items-end mt-1 ${ip === _ip ? " flex-row-reverse" : " flex-row"}`}>
-              <span className={`min-w-[8rem] inline-flex justify-center text-black pl-4 pr-4 text-xs font-medium bg-green-500 py-1 pt-1.5`} style={{ letterSpacing: '1px', transform: 'translateY(1px) '+(ip === _ip && "scaleX(-1)"), clipPath: 'polygon(calc(100% - 8px) 0px, 100% 8px, 100% 100%, 0px 100%, 0px 0px)' }}><span className={ip === _ip && "scale-x-[-1]"}>[{_ip}]</span></span>
-            </div>
-            <div className="border-2 relative min-w-[20vw] border-green-500 flex flex-col">
-              <div className="text-green-500 p-4 selection:text-neutral-900 selection:bg-green-500 flex flex-col gap-4">
-                {message.map(e => <p className="block break-all">
-                  {e}
-                </p>)}
+    <div className="App w-full h-full relative bg-black">
+      <Icon icon="simple-icons:socketdotio" className="w-[90%] h-[90%] text-green-500 opacity-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0" />
+      <div className="flex h-full relative z-50 flex-col p-16 text-[#20C20E] font-['Jetbrains_Mono']">
+        <h1 className="font-bold text-xl mb-4">SOCKET.IO IRC v0.4</h1>
+        <div className="flex-1 overflow-y-auto" id="messagebox">{_messageList.map(({ _ip, message, date, nickname }) => (
+          <div className={`w-full flex ${ip === "SYSTEM" ? "justify-center" : ip === _ip ? "justify-end" : "justify-start"}`}>
+            {_ip === "SYSTEM" ? (
+              <div className="w-full text-center flex flex-col gap-2 mb-2">{message.map(e => <p>{e.replace(new RegExp(`^\\[${ip}\\]`), "You")}</p>)}</div>
+            ) : (
+              <div className="my-4 selection:bg-neutral-900 selection:text-[#20C20E] relative animate__animated flex flex-col w-auto md:max-w-[50%]">
+                <div className={`inline-flex items-end mt-1 ${ip === _ip ? " flex-row-reverse" : " flex-row"}`}>
+                  <span className={`min-w-[8rem] inline-flex justify-center text-black pl-4 pr-4 text-xs font-medium bg-[#20C20E] py-1 pt-1.5`} style={{ letterSpacing: '1px', transform: 'translateY(1px) ' + (ip === _ip && "scaleX(-1)"), clipPath: 'polygon(calc(100% - 8px) 0px, 100% 8px, 100% 100%, 0px 100%, 0px 0px)' }}><span className={ip === _ip && "scale-x-[-1]"}>{nickname} [{_ip}]</span></span>
+                </div>
+                <div className="border-2 relative min-w-[24vw] border-[#20C20E] flex flex-col">
+                  <div className="text-[#20C20E] p-4 selection:text-neutral-900 selection:bg-[#20C20E] flex flex-col gap-4">
+                    {message.map(e => <p className="block break-all">
+                      {e}
+                    </p>)}
+                  </div>
+                </div>
+                <div className={`text-xs mt-1 ${ip === _ip ? "text-right" : ""}`}>{moment(date * 1000).format("lll")}</div>
               </div>
-            </div>
-            <div className={`text-xs mt-1 ${ip === _ip ? "text-right" : ""}`}>{moment(date * 1000).format("lll")}</div>
+            )}
           </div>
-        </div>
-      ))}</div>
-      <form onSubmit={sendMessage}>
-        <input type="text" value={message} placeholder="Please enter your message" onChange={e => setMessage(e.target.value)} className="border-2 border-green-500 placeholder-green-500 focus:outline-none bg-transparent w-full mt-4 p-4 px-5 [caret-shape:underscore]" />
-      </form>
+        ))}</div>
+        <form onSubmit={sendMessage}>
+          <input type="text" value={message} placeholder="Please enter your message" onChange={e => setMessage(e.target.value)} className="border-2 border-[#20C20E] placeholder-[#20C20E] focus:outline-none bg-transparent w-full mt-4 p-4 px-5 [caret-shape:underscore]" />
+        </form>
+      </div>
     </div>
   )
 }
