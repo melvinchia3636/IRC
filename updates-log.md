@@ -35,3 +35,11 @@ v0.3
 - combined frontend and backend into Next.JS
 - tagging feature added
 - users are now only able to join the chat once per IP
+
+0.7
+---------
+- added warning message for unknown command
+- added warning message when getting invalid color in /color command
+- added white color
+- added animation for tag list
+- added command list when the message starts with '/'
