@@ -29,3 +29,7 @@ v0.3
 - users will now be able to see who is typing in realtime
 - you can now see the amount of online users
 - user is now able to change the color of the user interface
+
+0.6
+---------
+- combined frontend and backend into Next.JS

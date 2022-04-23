@@ -173,8 +173,8 @@ function App() {
   const [message, setMessage] = useState("");
   const [socket, setSocket] = useState();
   const [ip, setIP] = useState("");
-  const [nickname, setNickname] = useState("Anonymous");
-  const [currentColor, setCurrentColor] = useState("teal");
+  const [nickname, setNickname] = useState();
+  const [currentColor, setCurrentColor] = useState();
 
   const [typingTimer, setTypingTimer] = useState();
   var doneTypingInterval = 2000; //time in ms, 5 seconds for example
@@ -210,7 +210,7 @@ function App() {
 
   useEffect(() => {
     setNickname(localStorage.getItem("nickname") || "Anonymous");
-    setCurrentColor(localStorage.getItem("color") || "teal");
+    setCurrentColor(localStorage.getItem("color") || "green");
     getData();
   }, []);
 

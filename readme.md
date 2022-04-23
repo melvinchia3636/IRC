@@ -34,11 +34,11 @@ I've made a simple yet nice-looking chat app that allows people to connect to it
 
 If you want to run the website on your local machine:
 1. Clone the repository: `git clone https://github.com/melvinchia3636/IRC`
-2. Install all required dependencies using `npm install` on both client and server side.
-4. Run `node server.js` on the server side.
-5. Configure your Wifi such that port 3000 and 3001 is opened.
-6. Change `Line 56` in `App.jsx` on the client side to your own IPv4 address.
-7. Run `npm run dev` on the client side.
+2. Install all required dependencies using `npm install`.
+3. Run `npm run dev` on the client side.
+4. Configure your Wifi such that port 3000 is opened.
+5. Share the link `http://\[your_public_ip\]:3000` to your friend
+6. Enjoy chatting!
 
 ## 📈 Status
 
