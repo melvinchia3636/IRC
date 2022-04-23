@@ -8,11 +8,7 @@
   font-weight: 1 999;
 }
 
-body, #root, .App {
-  height: 100%
-}
-
-html {
+html, body, #root, .App {
   height: 100vh;
   height: -webkit-fill-available;
 }
@@ -20,6 +16,8 @@ html {
 * {
     -ms-overflow-style: none;  /* Internet Explorer 10+ */
     scrollbar-width: none;  /* Firefox */
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: none
 }
 *::-webkit-scrollbar { 
     display: none;  /* Safari and Chrome */

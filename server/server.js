@@ -12,6 +12,15 @@ const io = new Server(server, {
   }
 });
 
+let users = [];
+
+const removeUser = (user) => {
+  const index = users.indexOf(user);
+  if (index !== -1) {
+    users.splice(index, 1);
+  }
+}
+
 io.on("connection", (socket) => {
   let user = "anonymous";
   let username = "Anonymous";
@@ -21,10 +30,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("connected", (ip, nickname) => {
-    console.log(`${ip} joined the chat`);
     user = ip
     username = nickname
+    users.push(user);
+
+    io.emit("onlineCount", users.length);
     io.emit("message", `${nickname} [${ip}] joined the chat`, "SYSTEM", new Number(new Date()) / 1000);
+  
+    console.log(`${ip} joined the chat`);
   })
 
   socket.on("nickname", (nickname) => {
@@ -35,6 +48,8 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     io.emit("message", `${username} [${user}] left the chat`, "SYSTEM", new Number(new Date()) / 1000);
     io.emit("stopTyping", user);
+    removeUser(user)
+    io.emit("onlineCount", users.length);
     console.log(`${user} left the chat`);
   })
 

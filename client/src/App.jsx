@@ -8,6 +8,7 @@ import { Icon } from "@iconify/react";
 function App() {
   const [_messageList, _setMessageList] = useState([]);
   const [_isTypingList, _setIsTypingList] = useState([]);
+  const [onlineUserCount, setOnlineUserCount] = useState(0);
   const messageList = useRef(_messageList);
   const isTypingList = useRef(_isTypingList);
   const [message, setMessage] = useState('');
@@ -62,7 +63,7 @@ function App() {
 
       socket.on('message', (message, ip, date, nickname) => {
         let newMessageList = [...messageList.current];
-        if (newMessageList[newMessageList.length - 1]?._ip === ip && date - newMessageList[newMessageList.length - 1]?.date < 60) {
+        if ((newMessageList[newMessageList.length - 1]?._ip === ip && date - newMessageList[newMessageList.length - 1]?.date < 60) || ip === "SYSTEM" && newMessageList[newMessageList.length - 1]?._ip === ip) {
           newMessageList[newMessageList.length - 1].message = [
             ...newMessageList[newMessageList.length - 1].message,
             message
@@ -97,6 +98,10 @@ function App() {
         newIsTypingList = newIsTypingList.filter(e => e.ip !== _ip);
         setIsTypingList(newIsTypingList);
       });
+      
+      socket.on("onlineCount", (count) => {
+        setOnlineUserCount(count);
+      })
 
       return () => socket.close()
     }
@@ -141,11 +146,14 @@ function App() {
     <div className="App w-full h-full relative bg-black">
       <Icon icon="simple-icons:socketdotio" className="w-[90%] h-[90%] text-green-500 opacity-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0" />
       <div className="flex h-full relative z-50 flex-col p-8 sm:p-16 text-[#20C20E] font-['Jetbrains_Mono']">
-        <h1 className="font-bold text-xl mb-4">SOCKET.IO IRC v0.5</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="font-bold text-2xl">SOCKET.IO IRC v0.5</h1>
+          <p className="text-right">{onlineUserCount} user(s) online</p>
+        </div>
         <div className="flex-1 overflow-y-auto" id="messagebox">{_messageList.map(({ _ip, message, date, nickname }) => (
           <div className={`w-full flex ${ip === "SYSTEM" ? "justify-center" : ip === _ip ? "justify-end" : "justify-start"}`}>
             {_ip === "SYSTEM" ? (
-              <div className="w-full text-center text-sm flex flex-col gap-2 mb-2">{message.map(e => <p>{e.replace(new RegExp(`^\\[${ip}\\]`), "You")}</p>)}</div>
+              <div className="w-full">{message.map(e => <div className="!text-[15px] w-full text-center my-1">{e.replace(new RegExp(`^\\[${ip}\\]`), "You")}</div>)}</div>
             ) : (
               <div className="my-4 selection:bg-neutral-900 selection:text-[#20C20E] relative animate__animated flex flex-col w-auto md:max-w-[50%]">
                 <div className={`inline-flex items-end mt-1 ${ip === _ip ? " flex-row-reverse" : " flex-row"}`}>
@@ -174,7 +182,9 @@ function App() {
           <form onSubmit={sendMessage} className="flex-1" id="message">
             <input type="text" value={message} placeholder="Please enter your message" onKeyUp={onMessageKeyUp} onKeyDown={onMessageKeyDown} onChange={e => setMessage(e.target.value)} className="placeholder-[#20C20E] focus:outline-none bg-transparent w-full p-4 pl-5 [caret-shape:underscore]" />
           </form>
-          <button type="submit" form="message">
+          <button type="submit" form="message" onTouchEnd={(e) => {
+            sendMessage(e);
+          }}>
             <Icon icon="ic:round-send" className='w-8 h-8 mr-3' />
           </button>
         </div>

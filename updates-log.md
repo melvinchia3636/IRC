@@ -27,3 +27,4 @@ v0.3
 ---------
 - added a button with send icon beside the message input
 - users will now be able to see who is typing in realtime
+- you can now see the amount of online users
