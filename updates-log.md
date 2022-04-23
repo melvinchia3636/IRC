@@ -33,3 +33,5 @@ v0.3
 0.6
 ---------
 - combined frontend and backend into Next.JS
+- tagging feature added
+- users are now only able to join the chat once per IP

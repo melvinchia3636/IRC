@@ -8,7 +8,11 @@
   font-weight: 1 999;
 }
 
-html, body, #root, .App {
+body, #root, .App, #__next {
+  height: 100%
+}
+
+html {
   height: 100vh;
   height: -webkit-fill-available;
 }

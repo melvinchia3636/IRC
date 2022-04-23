@@ -11,6 +11,7 @@
   "dependencies": {
     "@iconify/react": "^3.2.1",
     "@zeit/next-css": "^1.0.1",
+    "airbnb": "^0.0.2",
     "autoprefixer": "^10.4.4",
     "express": "^4.17.3",
     "file-loader": "^6.2.0",
@@ -30,7 +31,12 @@
     "url-loader": "^4.1.1"
   },
   "devDependencies": {
-    "eslint": "8.14.0",
-    "eslint-config-next": "12.1.5"
+    "eslint": "^8.2.0",
+    "eslint-config-airbnb": "19.0.4",
+    "eslint-config-next": "12.1.5",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-react": "^7.28.0",
+    "eslint-plugin-react-hooks": "^4.3.0"
   }
 }
