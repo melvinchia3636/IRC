@@ -2,6 +2,7 @@
 /* eslint-disable no-new-wrappers */
 /* eslint-disable no-console */
 import { Server } from 'socket.io';
+import uuidv4 from '../../misc/uuidv4';
 
 let users = [];
 
@@ -21,8 +22,8 @@ const ioHandler = (req, res) => {
       let username = 'Anonymous';
       let uuid;
 
-      socket.on('message', (msg, ip, date) => {
-        io.emit('message', msg, ip, date, username);
+      socket.on('message', (msg, id, ip, date, replyTo) => {
+        io.emit('message', msg, id, ip, date, username, replyTo);
       });
 
       socket.on('connected', (ip, nickname, userid) => {
@@ -30,7 +31,6 @@ const ioHandler = (req, res) => {
         username = nickname;
         uuid = userid;
 
-        console.log(users);
         users.push(
           {
             user,
@@ -43,6 +43,7 @@ const ioHandler = (req, res) => {
         io.emit(
           'message',
           `${nickname} [${ip}] joined the chat`,
+          uuidv4(),
           'SYSTEM',
           new Number(new Date()) / 1000,
         );
@@ -64,6 +65,7 @@ const ioHandler = (req, res) => {
         io.emit(
           'message',
           `[${user}] has set his nickname to ${nickname}`,
+          uuidv4(),
           'SYSTEM',
           new Number(new Date()) / 1000,
         );
@@ -73,6 +75,7 @@ const ioHandler = (req, res) => {
         io.emit(
           'message',
           `${username} [${user}] left the chat`,
+          uuidv4(),
           'SYSTEM',
           new Number(new Date()) / 1000,
         );

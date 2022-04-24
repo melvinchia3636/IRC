@@ -43,3 +43,10 @@ v0.3
 - added white color
 - added animation for tag list
 - added command list when the message starts with '/'
+- user can now export chat history with /export command
+
+0.8
+---------
+- minor bug fixes
+- user is now able to reply to messages
+- color selector added when user type /color command

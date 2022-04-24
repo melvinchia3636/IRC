@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-nested-ternary */
+import { Icon } from '@iconify/react';
 import moment from 'moment';
 import React from 'react';
 
@@ -7,6 +8,7 @@ export default function MessagesContainer({
   _messageList,
   ip,
   currentColor,
+  setReplyTo,
 }) {
   return (
     <div className="flex-1 overflow-y-auto" id="messagebox">
@@ -26,7 +28,7 @@ export default function MessagesContainer({
             <div className="w-full flex flex-col gap-2 my-1">
               {message.map((e) => (
                 <div className="!text-[15px] w-full text-center">
-                  {e.replace(new RegExp(`^\\[${ip}\\]`), 'You')}
+                  {e.message.replace(new RegExp(`^\\[${ip}\\]`), 'You')}
                 </div>
               ))}
             </div>
@@ -40,7 +42,7 @@ export default function MessagesContainer({
                 }`}
               >
                 <span
-                  className={`min-w-[8rem] inline-flex justify-center text-black pl-4 pr-4 text-xs font-medium bg-${currentColor} py-1 pt-1.5`}
+                  className={`min-w-[8rem] inline-flex rounded-t-sm justify-center text-black pl-4 pr-4 text-xs font-medium bg-${currentColor} py-1 pt-1.5`}
                   style={{
                     letterSpacing: '1px',
                     transform:
@@ -59,16 +61,34 @@ export default function MessagesContainer({
                 </span>
               </div>
               <div
-                className={`border-2 relative min-w-[24vw] border-${currentColor} flex flex-col`}
+                className={`border-2 rounded-sm rounded-t-none relative min-w-[24vw] border-${currentColor} flex flex-col`}
               >
                 <div
                   className={`text-${currentColor} p-4 flex flex-col gap-4`}
                 >
                   {message.map((e) => (
                     <p
-                      className={`block break-all selection:text-neutral-900 selection:bg-${currentColor}`}
+                      className={`flex break-all gap-6 group items-center justify-between selection:text-neutral-900 selection:bg-${currentColor} w-full relative`}
                     >
-                      {e}
+                      <div>
+                        {e.replyTo && (
+                        <div className={`border-l-2 border-${currentColor} pl-2 mb-1 text-sm`}>{_messageList.map((m) => m.message).flat().filter((m) => m.id === e.replyTo)?.pop()?.message || 'Message deleted'}</div>
+                        )}
+                        {e.message}
+                      </div>
+                      <div className="hidden group-hover:flex hover:flex items-center gap-2">
+                        <Icon icon="ic:outline-emoji-emotions" className={`text-${currentColor} w-5 h-5`} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReplyTo(e.id);
+                            document.getElementById('messageinput').focus();
+                          }}
+                        >
+                          <Icon icon="ic:round-reply" className={`text-${currentColor} w-5 h-5`} />
+                        </button>
+                        <Icon icon="ic:outline-delete" className={`text-${currentColor} w-5 h-5`} />
+                      </div>
                     </p>
                   ))}
                 </div>

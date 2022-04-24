@@ -17,29 +17,10 @@ import MessageInput from '../components/MessageInput';
 import MessagesContainer from '../components/MessagesContainer';
 import Header from '../components/Header';
 import Color from '../misc/colors';
+import createMessage from '../misc/createMessage';
+import * as commands from '../misc/command';
 
-const colors = [
-  'white',
-  'red-500',
-  'orange-500',
-  'amber-500',
-  'yellow-500',
-  'lime-500',
-  'green-500',
-  'emerald-500',
-  'teal-500',
-  'cyan-500',
-  'sky-500',
-  'blue-500',
-  'indigo-500',
-  'volet-500',
-  'purple-500',
-  'fuchsia-500',
-  'pink-500',
-  'rose-500',
-];
-
-const commands = [
+const commandsList = [
   {
     name: 'help',
     description: 'Display this help message',
@@ -64,25 +45,36 @@ const commands = [
     name: 'sound',
     description: 'Change notification sound',
   },
+  {
+    name: 'export',
+    description: 'Export your chat history',
+  },
 ];
 
 function App() {
   const [_messageList, _setMessageList] = useState([]);
   const [_isTypingList, _setIsTypingList] = useState([]);
   const [_socket, _setSocket] = useState();
+
   const [onlineUser, setOnlineUser] = useState([]);
   const messageList = useRef(_messageList);
   const isTypingList = useRef(_isTypingList);
   const socket = useRef(_socket);
   const [message, setMessage] = useState('');
+  const [replyTo, setReplyTo] = useState('');
+
   const [ip, setIP] = useState('');
   const [uuid] = useState(uuidv4());
   const [nickname, setNickname] = useState();
   const [currentColor, setCurrentColor] = useState();
-  const [tagListOpen, setTagListOpen] = useState(false);
+
   const [selectedTag, setSelectedTag] = useState(0);
   const [selectedCommand, setSelectedCommand] = useState(0);
+  const [selectedColor, setSelectedColor] = useState(0);
+
   const [showWarning, setShowWarning] = useState(false);
+
+  const [tagListOpen, setTagListOpen] = useState(false);
   const [commandListOpen, setCommandListOpen] = useState(false);
 
   const [typingTimer, setTypingTimer] = useState();
@@ -102,71 +94,32 @@ function App() {
     if (message.trim()) {
       if (message.startsWith('/')) {
         const command = message.split(' ')[0];
-        let args = message.trim().split(' ').slice(1).join(' ');
+        const args = message.trim().split(' ').slice(1).join(' ');
 
         switch (command) {
           case '/clear':
-            setMessageList([
-              {
-                message: ['Messages cleared'],
-                _ip: 'SYSTEM',
-                date: new Number(new Date()) / 1000,
-              },
-            ]);
+            commands.clearMessage(setMessageList);
             break;
 
           case '/nick':
-            const newNickname = args
-              .replace(/[^A-Za-z0-9]/g, '');
-            if (newNickname) {
-              localStorage.setItem('nickname', newNickname);
-              setNickname(newNickname);
-              socket.current.emit('nickname', newNickname);
-            } else {
-              setMessageList([
-                ...messageList.current,
-                {
-                  message: ['No nickname provided'],
-                  _ip: 'SYSTEM',
-                  date: new Number(new Date()) / 1000,
-                },
-              ]);
-            }
+            commands.changeNickname(args, setNickname, socket, setMessageList, messageList);
             break;
 
           case '/color':
-            args = args.toLowerCase();
-            if (args && colors.map((e) => e.split('-').shift()).includes(args)) {
-              localStorage.setItem('color', args + (args === 'white' ? '' : '-500'));
-              setCurrentColor(args + (args === 'white' ? '' : '-500'));
-              setMessageList([
-                ...messageList.current,
-                {
-                  message: [`You changed your color to ${args}`],
-                  _ip: 'SYSTEM',
-                  date: new Number(new Date()) / 1000,
-                },
-              ]);
-            } else {
-              setMessageList([
-                ...messageList.current,
-                {
-                  message: [args ? `Invalid color: ${args}` : 'No color specified'],
-                  _ip: 'SYSTEM',
-                  date: new Number(new Date()) / 1000,
-                },
-              ]);
-            }
+            commands.changeColor(args, setCurrentColor, setMessageList, messageList, createMessage);
+            break;
+
+          case '/export':
+            commands.exportChat(messageList, setMessageList, createMessage);
             break;
 
           default:
             setMessageList([
               ...messageList.current,
-              {
-                message: [`Unknown command: ${command}`],
-                _ip: 'SYSTEM',
-                date: new Number(new Date()) / 1000,
-              },
+              createMessage({
+                id: uuidv4(),
+                message: `Unknown command: ${command}`,
+              }, 'SYSTEM'),
             ]);
             break;
         }
@@ -174,8 +127,10 @@ function App() {
         socket.current.emit(
           'message',
           message.trim(),
+          uuidv4(),
           ip,
           new Number(new Date()) / 1000,
+          replyTo,
         );
       }
 
@@ -183,6 +138,7 @@ function App() {
         document.getElementById('messagebox').scrollTop = document.getElementById('messagebox').scrollHeight;
       }, 100);
 
+      setReplyTo(undefined);
       setMessage('');
       doneTyping();
     }
@@ -203,7 +159,7 @@ function App() {
 
     if (e.code === 'Enter') {
       if (tagListOpen && onlineUser.filter((u) => u.user !== ip
-      && e.username.startsWith(message.split(' ').pop().slice(1))).length > selectedTag) {
+      && u.username.startsWith(message.split(' ').pop().slice(1))).length > selectedTag) {
         setTagListOpen(false);
         setMessage(
           `${`${message
@@ -211,7 +167,7 @@ function App() {
             .slice(0, message.split(' ').length - 1)
             .join(' ')} @${
             onlineUser.filter((u) => u.user !== ip
-            && e.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
+            && u.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
           } `.trim()} `,
         );
         document.getElementById('messageinput').focus();
@@ -221,9 +177,20 @@ function App() {
         setCommandListOpen(false);
         setMessage(
           `/${
-            commands.filter(
+            commandsList.filter(
               (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
             )[selectedCommand].name
+          } `,
+        );
+        document.getElementById('messageinput').focus();
+        return;
+      }
+      if (message.split(' ').shift().startsWith('/color') && message.split(' ').length <= 2) {
+        setMessage(
+          `/color ${
+            commands.colors.filter(
+              (c) => c.startsWith(message.split(' ').pop().trim()),
+            )[selectedColor].split('-')[0]
           } `,
         );
         document.getElementById('messageinput').focus();
@@ -257,12 +224,35 @@ function App() {
       }
       if (e.code === 'ArrowDown') {
         e.preventDefault();
-        if (selectedCommand < commands.filter(
+        if (selectedCommand < commandsList.filter(
           (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
         ).length - 1) {
           setSelectedCommand(selectedCommand + 1);
         }
       }
+    }
+
+    if (message.split(' ').shift().startsWith('/color')) {
+      if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        if (selectedColor > 0) {
+          setSelectedColor(selectedColor - 1);
+        }
+      }
+      if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        if (selectedColor < commands.colors.filter(
+          (e) => e.startsWith(message.split(' ').pop().trim()),
+        ).length - 1) {
+          setSelectedColor(selectedColor + 1);
+        }
+      }
+      document.getElementById(`color-select-${commands.colors.filter(
+        (c) => c.startsWith(message.split(' ').pop().trim()),
+      )[selectedColor]}`)?.scrollIntoView({
+        block: 'center',
+        inline: 'center',
+      });
     }
   };
 
@@ -297,7 +287,7 @@ function App() {
           socket.emit('connected', ip, nickname, uuid);
         });
 
-        socket.on('message', (message, ip, date, nickname) => {
+        socket.on('message', (message, id, ip, date, nickname, replyTo) => {
           const newMessageList = [...messageList.current];
           if (
             (newMessageList[newMessageList.length - 1]?._ip === ip
@@ -307,15 +297,22 @@ function App() {
           ) {
             newMessageList[newMessageList.length - 1].message = [
               ...newMessageList[newMessageList.length - 1].message,
-              message,
+              {
+                id,
+                message,
+                replyTo,
+              },
             ];
           } else {
-            newMessageList.push({
-              message: [message],
-              _ip: ip,
-              date,
+            newMessageList.push(createMessage(
+              {
+                id,
+                message,
+                replyTo,
+              },
+              ip,
               nickname,
-            });
+            ));
           }
           setMessageList(newMessageList);
 
@@ -364,6 +361,7 @@ function App() {
     setCommandListOpen(message.split(' ').length === 1 && message.split(' ').shift().startsWith('/'));
     setSelectedTag(0);
     setSelectedCommand(0);
+    setSelectedColor(0);
   }, [message]);
 
   return !showWarning ? (
@@ -371,7 +369,7 @@ function App() {
       className={`App w-full h-full relative bg-black text-${currentColor}`}
     >
       <Head>
-        <title>SOCKET.IO IRC v0.6</title>
+        <title>SOCKET.IO IRC v0.8</title>
       </Head>
       <Icon
         icon="simple-icons:socketdotio"
@@ -385,19 +383,27 @@ function App() {
           _messageList={_messageList}
           ip={ip}
           currentColor={currentColor}
+          setReplyTo={setReplyTo}
         />
         <MessageInput
           currentColor={currentColor}
           tagListOpen={tagListOpen}
           commandListOpen={commandListOpen}
           onlineUser={onlineUser}
-          commands={commands}
+          commands={commandsList}
           message={message}
           setMessage={setMessage}
+          replyTo={_messageList.map((e) => e.message.map((m) => ({
+            ...m,
+            _ip: e._ip,
+            nickname: e.nickname,
+          }))).flat().filter((e) => e.id === replyTo)?.pop()}
+          setReplyTo={setReplyTo}
           sendMessage={sendMessage}
           ip={ip}
           selectedTag={selectedTag}
           selectedCommand={selectedCommand}
+          selectedColor={selectedColor}
           onMessageKeyDown={onMessageKeyDown}
           onMessageKeyUp={onMessageKeyUp}
           _isTypingList={_isTypingList}

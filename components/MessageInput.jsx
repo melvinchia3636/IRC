@@ -1,27 +1,67 @@
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable react/destructuring-assignment */
 /* eslint-disable react/prop-types */
 import { Icon } from '@iconify/react';
 import React from 'react';
+import { colors } from '../misc/command';
+
+function ReplyMessage({ replyTo, setReplyTo, currentColor }) {
+  return (
+    <div
+      className={`absolute top-0 left-0 transition-[all] rounded-t-sm px-4 -translate-y-full w-full overflow-y-auto flex flex-col ${
+        replyTo ? 'border-2 max-h-96 py-4' : 'border-0 max-h-0'
+      } border-${currentColor} bg-black`}
+    >
+      {replyTo && (
+        <>
+          <div className="text-sm mb-1">
+            Reply to
+            {' '}
+            <span className="font-bold">{replyTo.nickname}</span>
+            {' '}
+            [
+            {replyTo._ip}
+            ]
+          </div>
+          <div className="truncate">
+            {replyTo.message}
+          </div>
+          <button onClick={() => setReplyTo(undefined)} type="button" className="absolute right-4 top-4">
+            <Icon icon="uil:times" className="w-5 h-5" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 function TagList({
   tagListOpen, currentColor, onlineUser, message, setMessage, selectedTag, ip,
 }) {
   return (
     <div
-      className={`absolute top-0 left-0 transition-[all] -translate-y-full w-full overflow-y-auto flex flex-col ${
+      className={`absolute top-0 left-0 transition-[all] rounded-t-sm -translate-y-full w-full overflow-y-auto flex flex-col ${
         tagListOpen ? 'border-2 max-h-96' : 'border-0 max-h-0'
       } border-${currentColor} bg-black`}
     >
       {onlineUser
         .filter(
-          (e) => e.user !== ip
-  && e.username.startsWith(message.split(' ').pop().slice(1)),
+          (e) => e.user !== ip && e.username.startsWith(message.split(' ').pop().slice(1)),
         )
         .map(({ user, username }, i) => (
           <button
             type="button"
             tabIndex="0"
             onClick={() => {
-              setMessage(`${message}${username} `);
+              setMessage(
+                `${`${message
+                  .split(' ')
+                  .slice(0, message.split(' ').length - 1)
+                  .join(' ')} @${
+                  onlineUser.filter((u) => u.user !== ip
+                  && u.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
+                } `.trim()} `,
+              );
               document.getElementById('messageinput').focus();
             }}
             className={`p-4 w-full flex items-center justify-between ${
@@ -30,8 +70,7 @@ function TagList({
                 : 'hover:bg-zinc-900'
             } ${
               i !== onlineUser.filter((e) => e.user !== ip
-              && e.username.startsWith(message.split(' ').pop().slice(1))).length - 1
-    && 'border-b-2'
+              && e.username.startsWith(message.split(' ').pop().slice(1))).length - 1 && 'border-b-2'
             } border-${currentColor}`}
           >
             <span className="block">
@@ -50,7 +89,7 @@ function CommandList({
 }) {
   return (
     <div
-      className={`absolute top-0 left-0 transition-[all] -translate-y-full w-full overflow-y-auto flex flex-col ${
+      className={`absolute top-0 left-0 transition-[all] rounded-t-sm -translate-y-full w-full overflow-y-auto flex flex-col ${
         commandListOpen ? 'border-2 max-h-96' : 'border-0 max-h-0'
       } border-${currentColor} bg-black`}
     >
@@ -72,9 +111,9 @@ function CommandList({
                 : 'hover:bg-zinc-900'
             } ${
               i !== commands.filter(
-                (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
+                (e) => e.name.startsWith(message.split(' ').shift().slice(1)),
               ).length - 1
-    && 'border-b-2'
+                && 'border-b-2'
             } border-${currentColor}`}
           >
             <span className="block">
@@ -88,6 +127,48 @@ function CommandList({
   );
 }
 
+function ColorList({
+  message, setMessage, currentColor, selectedColor,
+}) {
+  console.log(setMessage);
+  return (
+    <div
+      className={`absolute top-0 left-0 transition-[all] rounded-t-sm -translate-y-full w-full overflow-y-auto flex flex-col ${
+        message.split(' ').shift() === '/color' && message.split(' ').slice(1).length === 1 ? 'border-2 max-h-96' : 'border-0 max-h-0'
+      } border-${currentColor} bg-black`}
+    >
+      {colors.filter(
+        (c) => c.startsWith(message.split(' ').slice(1).join(' ')),
+      ).map((e, i) => (
+        <button
+          id={`color-select-${e}`}
+          className={`p-4 flex items-center gap-2 ${i === selectedColor
+            ? `bg-${currentColor} text-black`
+            : 'hover:bg-zinc-900'
+          } ${
+            i !== colors.filter(
+              (c) => c.startsWith(message.split(' ').pop().trim()),
+            ).length - 1
+            && 'border-b-2'
+          } border-${currentColor}`}
+          type="button"
+          onClick={() => {
+            setMessage(
+              `/color ${
+                e.split('-')[0]
+              } `,
+            );
+            document.getElementById('messageinput').focus();
+          }}
+        >
+          <span className={`block w-5 h-5 bg-${e} border-2 border-black rounded-sm`} />
+          {e.split('-')[0]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function MessageInpput({
   currentColor,
   tagListOpen,
@@ -96,10 +177,13 @@ export default function MessageInpput({
   commands,
   message,
   setMessage,
+  replyTo,
+  setReplyTo,
   sendMessage,
   ip,
   selectedTag,
   selectedCommand,
+  selectedColor,
   onMessageKeyDown,
   onMessageKeyUp,
   _isTypingList,
@@ -107,8 +191,13 @@ export default function MessageInpput({
   return (
     <>
       <div
-        className={`flex items-center relative gap-6 w-full mt-4 border-2 border-${currentColor}`}
+        className={`flex items-center relative gap-6 w-full mt-4 border-2 rounde-sm border-${currentColor}`}
       >
+        <ReplyMessage
+          replyTo={replyTo}
+          setReplyTo={setReplyTo}
+          currentColor={currentColor}
+        />
         <TagList
           tagListOpen={tagListOpen}
           currentColor={currentColor}
@@ -126,12 +215,20 @@ export default function MessageInpput({
           commands={commands}
           message={message}
         />
+        <ColorList
+          message={message}
+          setMessage={setMessage}
+          currentColor={currentColor}
+          selectedColor={selectedColor}
+        />
         <form
           onSubmit={(e) => e.preventDefault()}
           className="flex-1"
           id="message"
+          autoComplete="off"
         >
           <input
+            autoComplete="false"
             id="messageinput"
             type="text"
             value={message}
