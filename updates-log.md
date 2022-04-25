@@ -51,3 +51,7 @@ v0.3
 - user is now able to reply to messages
 - color selector added when user type /color command
 - added tons of upcoming features plan into command list
+
+0.9
+---------
+- seperated backend from frontend

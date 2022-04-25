@@ -249,81 +249,84 @@ function App() {
 
   useEffect(() => {
     if (ip && nickname) {
-      fetch('/api/socketio').finally(() => {
-        const socket = io();
-        setSocket(socket);
+      const socket = io('http://localhost:3001');
+      setSocket(socket);
 
-        socket.on('connect', () => {
-          socket.emit('connected', ip, nickname, uuid);
-        });
+      socket.on('connect', () => {
+        socket.emit('connected', ip, nickname, uuid);
+      });
 
-        socket.on('message', (message, id, ip, date, nickname, replyTo) => {
-          const newMessageList = [...messageList.current];
-          if (
-            (newMessageList[newMessageList.length - 1]?._ip === ip
+      socket.on('message', (message, id, ip, date, nickname, replyTo) => {
+        const newMessageList = [...messageList.current];
+        if (
+          (newMessageList[newMessageList.length - 1]?._ip === ip
               && date - newMessageList[newMessageList.length - 1]?.date < 60)
             || (ip === 'SYSTEM'
               && newMessageList[newMessageList.length - 1]?._ip === ip)
-          ) {
-            newMessageList[newMessageList.length - 1].message = [
-              ...newMessageList[newMessageList.length - 1].message,
-              {
-                id,
-                message,
-                replyTo,
-              },
-            ];
-          } else {
-            newMessageList.push(createMessage(
-              {
-                id,
-                message,
-                replyTo,
-              },
-              ip,
-              nickname,
-            ));
-          }
-          setMessageList(newMessageList);
+        ) {
+          newMessageList[newMessageList.length - 1].message = [
+            ...newMessageList[newMessageList.length - 1].message,
+            {
+              id,
+              message,
+              replyTo,
+            },
+          ];
+        } else {
+          newMessageList.push(createMessage(
+            {
+              id,
+              message,
+              replyTo,
+            },
+            ip,
+            nickname,
+          ));
+        }
+        setMessageList(newMessageList);
 
-          setTimeout(() => {
-            document.getElementById('messagebox').scrollTop = document.getElementById('messagebox').scrollHeight;
-          }, 100);
+        setTimeout(() => {
+          document.getElementById('messagebox').scrollTop = document.getElementById('messagebox').scrollHeight;
+        }, 100);
 
-          new Audio(alertSound).play();
-        });
-
-        socket.on('typing', (_ip, nickname) => {
-          const newIsTypingList = [...isTypingList.current];
-          if (
-            _ip !== ip
-            && newIsTypingList.filter((e) => e.ip === _ip).length === 0
-          ) {
-            newIsTypingList.push({ ip: _ip, nickname });
-          }
-          setIsTypingList(newIsTypingList);
-        });
-
-        socket.on('stopTyping', (_ip) => {
-          let newIsTypingList = [...isTypingList.current];
-          newIsTypingList = newIsTypingList.filter((e) => e.ip !== _ip);
-          setIsTypingList(newIsTypingList);
-        });
-
-        socket.on('onlineUser', (userList) => {
-          setOnlineUser(userList);
-          if (
-            userList.filter((e) => e.user === ip).length > 1
-            && userList.filter((e) => e.user === ip).pop().uuid === uuid
-          ) {
-            socket.close();
-            setShowWarning(true);
-          }
-        });
+        new Audio(alertSound).play();
       });
-      return () => socket.current.close();
+
+      socket.on('typing', (_ip, nickname) => {
+        const newIsTypingList = [...isTypingList.current];
+        if (
+          _ip !== ip
+            && newIsTypingList.filter((e) => e.ip === _ip).length === 0
+        ) {
+          newIsTypingList.push({ ip: _ip, nickname });
+        }
+        setIsTypingList(newIsTypingList);
+      });
+
+      socket.on('stopTyping', (_ip) => {
+        let newIsTypingList = [...isTypingList.current];
+        newIsTypingList = newIsTypingList.filter((e) => e.ip !== _ip);
+        setIsTypingList(newIsTypingList);
+      });
+
+      socket.on('onlineUser', (userList) => {
+        setOnlineUser(userList);
+        if (
+          userList.filter((e) => e.user === ip).length > 1
+            && userList.filter((e) => e.user === ip).pop().uuid === uuid
+        ) {
+          socket.close();
+          setShowWarning(true);
+        }
+      });
     }
-    return () => {};
+    return () => {
+      try {
+        socket.close();
+      } catch (e) {
+        console.log(e);
+      }
+    };
   }, [ip]);
 
   useEffect(() => {
