@@ -100,6 +100,7 @@ function App() {
           uuidv4(),
           ip,
           new Number(new Date()) / 1000,
+          nickname,
           replyTo,
         );
       }
@@ -249,7 +250,7 @@ function App() {
 
   useEffect(() => {
     if (ip && nickname) {
-      const socket = io('http://localhost:3001');
+      const socket = io('http://147.158.246.92:3001');
       setSocket(socket);
 
       socket.on('connect', () => {
