@@ -86,7 +86,7 @@ function exportChat(messageList, setMessageList) {
     ...messageList.current,
     createMessage({
       id: uuidv4(),
-      message: 'Chat messages cleared',
+      message: 'Chat messages exported',
     }, 'SYSTEM'),
   ]);
 }

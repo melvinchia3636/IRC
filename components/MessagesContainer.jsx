@@ -68,11 +68,11 @@ export default function MessagesContainer({
                 >
                   {message.map((e) => (
                     <p
-                      className={`flex break-all gap-6 group items-center justify-between selection:text-neutral-900 selection:bg-${currentColor} w-full relative`}
+                      className={`flex break-all gap-6 group items-center justify-between selection:!text-neutral-900 selection:bg-${currentColor} w-full relative`}
                     >
                       <div>
                         {e.replyTo && (
-                        <div className={`border-l-2 border-${currentColor} pl-2 mb-1 text-sm`}>{_messageList.map((m) => m.message).flat().filter((m) => m.id === e.replyTo)?.pop()?.message || 'Message deleted'}</div>
+                        <div className={`border-l-2 border-${currentColor} opacity-70 pl-2 mb-1 text-sm`}>{_messageList.map((m) => m.message).flat().filter((m) => m.id === e.replyTo)?.pop()?.message || 'Message deleted'}</div>
                         )}
                         {e.message}
                       </div>
