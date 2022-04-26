@@ -24,7 +24,11 @@ function ReplyMessage({ replyTo, setReplyTo, currentColor }) {
             ]
           </div>
           <div className="truncate">
-            {replyTo.message}
+            {replyTo.type === 'image' ? (
+              <img src={replyTo.message} alt="reply" className="object-contain w-full h-32 object-left" />
+            ) : (
+              replyTo.message
+            )}
           </div>
           <button onClick={() => setReplyTo(undefined)} type="button" className="absolute right-4 top-4">
             <Icon icon="uil:times" className="w-5 h-5" />
@@ -57,9 +61,7 @@ function TagList({
                 `${`${message
                   .split(' ')
                   .slice(0, message.split(' ').length - 1)
-                  .join(' ')} @${
-                  onlineUser.filter((u) => u.user !== ip
-                  && u.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
+                  .join(' ')} @${username
                 } `.trim()} `,
               );
               document.getElementById('messageinput').focus();
@@ -130,7 +132,6 @@ function CommandList({
 function ColorList({
   message, setMessage, currentColor, selectedColor,
 }) {
-  console.log(setMessage);
   return (
     <div
       className={`absolute top-0 left-0 transition-[all] rounded-t-sm -translate-y-full w-full overflow-y-auto flex flex-col ${
@@ -180,6 +181,7 @@ export default function MessageInpput({
   replyTo,
   setReplyTo,
   sendMessage,
+  sendImage,
   ip,
   selectedTag,
   selectedCommand,
@@ -189,65 +191,75 @@ export default function MessageInpput({
   _isTypingList,
 }) {
   return (
-    <>
-      <div
-        className={`flex items-center relative gap-6 w-full mt-4 border-2 rounde-sm border-${currentColor}`}
-      >
-        <ReplyMessage
-          replyTo={replyTo}
-          setReplyTo={setReplyTo}
-          currentColor={currentColor}
-        />
-        <TagList
-          tagListOpen={tagListOpen}
-          currentColor={currentColor}
-          onlineUser={onlineUser}
-          message={message}
-          setMessage={setMessage}
-          selectedTag={selectedTag}
-          ip={ip}
-        />
-        <CommandList
-          commandListOpen={commandListOpen}
-          currentColor={currentColor}
-          setMessage={setMessage}
-          selectedCommand={selectedCommand}
-          commands={commands}
-          message={message}
-        />
-        <ColorList
-          message={message}
-          setMessage={setMessage}
-          currentColor={currentColor}
-          selectedColor={selectedColor}
-        />
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="flex-1"
-          id="message"
-          autoComplete="off"
+    <div className="mt-4">
+      <div className={`flex-1 flex items-center border-2 rounde-sm border-${currentColor}`}>
+        <div className={`overflow-hidden transition-all flex items-center ${message ? 'w-0' : 'w-20'}`}>
+          <button type="button" onClick={sendImage} className="ml-4">
+            <Icon icon="ic:outline-image" className="w-6 h-6" />
+          </button>
+          <button type="button" onClick={sendImage} className="ml-3">
+            <Icon icon="ic:outline-attach-file" className="w-6 h-6" />
+          </button>
+        </div>
+        <div
+          className="flex items-center relative gap-6 w-full"
         >
-          <input
-            autoComplete="false"
-            id="messageinput"
-            type="text"
-            value={message}
-            placeholder="Please enter your message"
-            onKeyUp={onMessageKeyUp}
-            onKeyDown={onMessageKeyDown}
-            onChange={(e) => setMessage(e.target.value)}
-            className={`placeholder-${currentColor} focus:outline-none bg-transparent w-full p-4 pl-5 [caret-shape:underscore]`}
+          <ReplyMessage
+            replyTo={replyTo}
+            setReplyTo={setReplyTo}
+            currentColor={currentColor}
           />
-        </form>
-        <button
-          type="submit"
-          form="message"
-          onTouchEnd={(e) => {
-            sendMessage(e);
-          }}
-        >
-          <Icon icon="ic:round-send" className="w-8 h-8 mr-3" />
-        </button>
+          <TagList
+            tagListOpen={tagListOpen}
+            currentColor={currentColor}
+            onlineUser={onlineUser}
+            message={message}
+            setMessage={setMessage}
+            selectedTag={selectedTag}
+            ip={ip}
+          />
+          <CommandList
+            commandListOpen={commandListOpen}
+            currentColor={currentColor}
+            setMessage={setMessage}
+            selectedCommand={selectedCommand}
+            commands={commands}
+            message={message}
+          />
+          <ColorList
+            message={message}
+            setMessage={setMessage}
+            currentColor={currentColor}
+            selectedColor={selectedColor}
+          />
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="flex-1"
+            id="message"
+            autoComplete="off"
+          >
+            <input
+              autoComplete="false"
+              id="messageinput"
+              type="text"
+              value={message}
+              placeholder="Please enter your message"
+              onKeyUp={onMessageKeyUp}
+              onKeyDown={onMessageKeyDown}
+              onChange={(e) => setMessage(e.target.value)}
+              className={`placeholder-${currentColor} focus:outline-none bg-transparent w-full p-4 pl-5 [caret-shape:underscore]`}
+            />
+          </form>
+          <button
+            type="submit"
+            form="message"
+            onTouchEnd={(e) => {
+              sendMessage(e);
+            }}
+          >
+            <Icon icon="ic:round-send" className="w-8 h-8 mr-3" />
+          </button>
+        </div>
       </div>
       <div className="mt-2">
         {_isTypingList.map(({ nickname }) => (
@@ -260,6 +272,6 @@ export default function MessageInpput({
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

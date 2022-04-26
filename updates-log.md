@@ -55,3 +55,4 @@ v0.3
 0.9
 ---------
 - seperated backend from frontend
+- user can now send images

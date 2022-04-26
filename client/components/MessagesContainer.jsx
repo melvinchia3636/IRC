@@ -72,9 +72,31 @@ export default function MessagesContainer({
                     >
                       <div>
                         {e.replyTo && (
-                        <div className={`border-l-2 border-${currentColor} opacity-70 pl-2 mb-1 text-sm`}>{_messageList.map((m) => m.message).flat().filter((m) => m.id === e.replyTo)?.pop()?.message || 'Message deleted'}</div>
+                        <div className={`border-l-2 border-${currentColor} opacity-70 pl-2 mb-1 text-sm`}>
+                          {(() => {
+                            const mes = _messageList
+                              .map((m) => m.message)
+                              .flat()
+                              .filter((m) => m.id === e.replyTo)?.pop();
+                            if (mes) {
+                              if (mes.type === 'image') {
+                                return (
+                                  <img
+                                    src={mes.message}
+                                    alt=""
+                                    className="w-full"
+                                  />
+                                );
+                              }
+                              return mes.message;
+                            }
+                            return 'Message deleted';
+                          })()}
+                        </div>
                         )}
-                        {e.message}
+                        {e.type !== 'image' ? e.message : (
+                          <img src={e.message} alt="message" className="w-full h-full" />
+                        )}
                       </div>
                       <div className="hidden group-hover:flex hover:flex items-center gap-2">
                         <Icon icon="ic:outline-emoji-emotions" className={`text-${currentColor} w-5 h-5`} />

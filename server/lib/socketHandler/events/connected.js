@@ -12,6 +12,8 @@ module.exports = function connectedEvent(ip, nickname, userid) {
 
   user.uuid = userid;
 
+  console.log(users);
+
   io.to('room1').emit('onlineUser', users);
   io.to('room1').emit(
     'message',

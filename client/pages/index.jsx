@@ -11,6 +11,7 @@ import { io } from 'socket.io-client';
 import publicIp from 'public-ip';
 import { Icon } from '@iconify/react';
 import Head from 'next/head';
+import Compress from 'compress.js';
 import alertSound from '../public/alert.mp3';
 import uuidv4 from '../misc/uuidv4';
 import MessageInput from '../components/MessageInput';
@@ -20,6 +21,21 @@ import Color from '../misc/colors';
 import createMessage from '../misc/createMessage';
 import * as commands from '../misc/command';
 import commandList from '../misc/commandList';
+
+const compress = new Compress();
+
+async function resizeImageFn(file) {
+  const resizedImage = await compress.compress([file], {
+    size: 10, // the max size in MB, defaults to 2MB
+    quality: 1, // the quality of the image, max is 1,
+    maxWidth: 500, // the max width of the output image, defaults to 1920px
+    maxHeight: 500, // the max height of the output image, defaults to 1920px
+    resize: true,
+  });
+  const img = resizedImage[0];
+  const base64str = img.prefix + img.data;
+  return base64str;
+}
 
 function App() {
   const [_messageList, _setMessageList] = useState([]);
@@ -115,6 +131,30 @@ function App() {
     }
   };
 
+  const sendImage = () => {
+    // create and open file dialog
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.click();
+
+    fileInput.onchange = () => {
+      const file = fileInput.files[0];
+
+      resizeImageFn(file).then((base64str) => {
+        socket.current.emit(
+          'imageMessage',
+          base64str,
+          uuidv4(),
+          ip,
+          new Number(new Date()) / 1000,
+          nickname,
+          replyTo,
+        );
+      });
+    };
+  };
+
   const onMessageKeyUp = () => {
     clearTimeout(typingTimer);
     setTypingTimer(setTimeout(doneTyping, doneTypingInterval));
@@ -126,7 +166,7 @@ function App() {
     }
 
     clearTimeout(typingTimer);
-    socket.current.emit('typing', ip, nickname);
+    socket.current.emit('typing', uuid);
 
     if (e.code === 'Enter') {
       if (tagListOpen && onlineUser.filter((u) => u.user !== ip
@@ -250,14 +290,14 @@ function App() {
 
   useEffect(() => {
     if (ip && nickname) {
-      const socket = io('http://147.158.246.92:3001');
+      const socket = io('http://147.158.215.79:3001');
       setSocket(socket);
 
       socket.on('connect', () => {
         socket.emit('connected', ip, nickname, uuid);
       });
 
-      socket.on('message', (message, id, ip, date, nickname, replyTo) => {
+      socket.on('message', (message, id, ip, date, nickname, replyTo, type) => {
         const newMessageList = [...messageList.current];
         if (
           (newMessageList[newMessageList.length - 1]?._ip === ip
@@ -271,6 +311,7 @@ function App() {
               id,
               message,
               replyTo,
+              type,
             },
           ];
         } else {
@@ -279,6 +320,7 @@ function App() {
               id,
               message,
               replyTo,
+              type,
             },
             ip,
             nickname,
@@ -320,14 +362,9 @@ function App() {
           setShowWarning(true);
         }
       });
+      return () => socket.close();
     }
-    return () => {
-      try {
-        socket.close();
-      } catch (e) {
-        console.log(e);
-      }
-    };
+    return () => {};
   }, [ip]);
 
   useEffect(() => {
@@ -349,7 +386,7 @@ function App() {
         icon="simple-icons:socketdotio"
         className="w-[90%] h-[90%] opacity-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0"
       />
-      <div className="flex h-full relative z-50 flex-col p-8 sm:p-16 font-['Jetbrains_Mono']">
+      <div className="flex h-full relative z-50 flex-col p-8 sm:p-16 font-['Fira_Code']">
         <Header
           onlineUser={onlineUser}
         />
@@ -374,6 +411,7 @@ function App() {
           }))).flat().filter((e) => e.id === replyTo)?.pop()}
           setReplyTo={setReplyTo}
           sendMessage={sendMessage}
+          sendImage={sendImage}
           ip={ip}
           selectedTag={selectedTag}
           selectedCommand={selectedCommand}

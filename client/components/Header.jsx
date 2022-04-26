@@ -8,6 +8,8 @@ export default function Header({
     <div className="flex items-center justify-between mb-8">
       <h1 className="font-bold text-2xl">SOCKET.IO IRC v0.8</h1>
       <p className="text-right">
+        Public |
+        {' '}
         {onlineUser.length}
         {' '}
         user(s) online

@@ -13,6 +13,7 @@
     "@zeit/next-css": "^1.0.1",
     "airbnb": "^0.0.2",
     "autoprefixer": "^10.4.4",
+    "compress.js": "^1.2.2",
     "express": "^4.17.3",
     "file-loader": "^6.2.0",
     "fs": "^0.0.1-security",

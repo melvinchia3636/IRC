@@ -143,6 +143,34 @@ const commmandList = [
     name: 'theme',
     description: 'Change the UI/UX theme of the chatroom (coming soon)',
   },
+  {
+    name: 'server init',
+    description: 'Download server config template (coming soon)',
+  },
+  {
+    name: 'server join',
+    description: 'Join a server (coming soon)',
+  },
+  {
+    name: 'server leave',
+    description: 'Leave a server (coming soon)',
+  },
+  {
+    name: 'server create',
+    description: 'create a server using specified server config (coming soon)',
+  },
+  {
+    name: 'server list',
+    description: 'List all public server (coming soon)',
+  },
+  {
+    name: 'connect',
+    description: 'Connect to physical server (coming soon)',
+  },
+  {
+    name: 'pm',
+    description: 'Send a private message (only specific user will receive the message) (coming soon)',
+  },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
 export default commmandList;
