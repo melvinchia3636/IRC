@@ -290,7 +290,7 @@ function App() {
 
   useEffect(() => {
     if (ip && nickname) {
-      const socket = io('http://147.158.215.79:3001');
+      const socket = io('http://147.158.248.244:3001');
       setSocket(socket);
 
       socket.on('connect', () => {
@@ -380,7 +380,7 @@ function App() {
       className={`App w-full h-full relative bg-black text-${currentColor}`}
     >
       <Head>
-        <title>SOCKET.IO IRC v0.8</title>
+        <title>SOCKET.IO IRC v0.9</title>
       </Head>
       <Icon
         icon="simple-icons:socketdotio"
