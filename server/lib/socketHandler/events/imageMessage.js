@@ -1,3 +1,4 @@
 module.exports = function imageMessageEvent(msg, id, ip, date, username, replyTo) {
-  this.io.to('room1').emit('message', msg, id, ip, date, username, replyTo, 'image');
+  const u = this.users.filter((e) => e.uuid === this.user.uuid).pop();
+  this.io.to(u.channel).emit('message', msg, id, ip, date, username, replyTo, 'image');
 };

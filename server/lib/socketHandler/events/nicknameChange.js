@@ -10,8 +10,9 @@ module.exports = function nicknameChangeEvent(nickname) {
       u.username = nickname;
     }
   });
+  const us = users.filter((e) => e.uuid === user.uuid).pop();
 
-  io.to('room1').emit(
+  io.to(us.channel).emit(
     'message',
     `[${
       users.filter((u) => u.uuid === user.uuid).pop().user

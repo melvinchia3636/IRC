@@ -10,7 +10,7 @@ module.exports = function disconnectEvent() {
 
   const u = users.filter((e) => e.uuid === user.uuid).pop();
 
-  io.to('room1').emit(
+  io.emit(
     'message',
     `${u.username} [${u.user}] left the chat`,
     uuidv4(),

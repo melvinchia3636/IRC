@@ -8,6 +8,10 @@ const disconnectEvent = require('./events/disconnect');
 const typingEvent = require('./events/typing');
 
 const users = [];
+const channels = [
+  'general',
+  'announcements',
+];
 
 const removeUser = (uuid) => {
   const index = users.findIndex((u) => u.uuid === uuid);
@@ -21,18 +25,24 @@ module.exports = function socketHandler(socket) {
     uuid: undefined,
   };
 
-  socket.join('room1');
+  socket.join(channels[0]);
 
-  socket.on('message', messageEvent.bind({ io }));
-  socket.on('imageMessage', imageMessageEvent.bind({ io }));
-  socket.on('connected', connectedEvent.bind({ io, user, users }));
+  socket.on('message', messageEvent.bind({ io, user, users }));
+  socket.on('imageMessage', imageMessageEvent.bind({ io, user, users }));
+  socket.on('connected', connectedEvent.bind({
+    io, user, users, channels,
+  }));
   socket.on('nickname', nicknameChangeEvent.bind({ io, user, users }));
   socket.on('disconnect', disconnectEvent.bind({
     io, user, users, removeUser,
   }));
   socket.on('typing', typingEvent.bind({ io, users }));
-
   socket.on('stopTyping', (ip) => {
     io.to('room1').emit('stopTyping', ip);
+  });
+  socket.on('changeChannel', (channel) => {
+    socket.leave(users.filter((e) => e.uuid === user.uuid)[0].channel);
+    users.filter((e) => e.uuid === user.uuid)[0].channel = channel;
+    socket.join(channel);
   });
 };

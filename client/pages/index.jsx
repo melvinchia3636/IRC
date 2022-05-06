@@ -38,11 +38,13 @@ async function resizeImageFn(file) {
 }
 
 function App() {
-  const [_messageList, _setMessageList] = useState([]);
+  const [_messageList, _setMessageList] = useState({});
   const [_isTypingList, _setIsTypingList] = useState([]);
   const [_socket, _setSocket] = useState();
 
   const [onlineUser, setOnlineUser] = useState([]);
+  const [_channels, _setChannels] = useState([]);
+  const channels = useRef();
   const messageList = useRef(_messageList);
   const isTypingList = useRef(_isTypingList);
   const socket = useRef(_socket);
@@ -53,6 +55,8 @@ function App() {
   const [uuid] = useState(uuidv4());
   const [nickname, setNickname] = useState();
   const [currentColor, setCurrentColor] = useState();
+  const [_currentChannel, _setCurrentChannel] = useState(null);
+  const currentChannel = useRef();
 
   const [selectedTag, setSelectedTag] = useState(0);
   const [selectedCommand, setSelectedCommand] = useState(0);
@@ -75,6 +79,16 @@ function App() {
     _setMessageList(msgl);
   };
 
+  const setCurrentChannel = (channel) => {
+    currentChannel.current = channel;
+    _setCurrentChannel(channel);
+  };
+
+  const setChannels = (channellist) => {
+    channels.current = channellist;
+    _setChannels(channellist);
+  };
+
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim()) {
@@ -84,29 +98,46 @@ function App() {
 
         switch (command) {
           case '/clear':
-            commands.clearMessage(setMessageList);
+            commands.clearMessage(setMessageList, messageList, _currentChannel);
             break;
 
           case '/nick':
-            commands.changeNickname(args, setNickname, socket, setMessageList, messageList);
+            commands.changeNickname(
+              args,
+              setNickname,
+              socket,
+              setMessageList,
+              messageList,
+              _currentChannel,
+            );
             break;
 
           case '/color':
-            commands.changeColor(args, setCurrentColor, setMessageList, messageList, createMessage);
+            commands.changeColor(
+              args,
+              setCurrentColor,
+              setMessageList,
+              messageList,
+              createMessage,
+              _currentChannel,
+            );
             break;
 
           case '/export':
-            commands.exportChat(messageList, setMessageList, createMessage);
+            commands.exportChat(messageList, setMessageList, createMessage, _currentChannel);
             break;
 
           default:
-            setMessageList([
+            setMessageList({
               ...messageList.current,
-              createMessage({
-                id: uuidv4(),
-                message: `Unknown command: ${command}`,
-              }, 'SYSTEM'),
-            ]);
+              ...Object.fromEntries([[_currentChannel, [
+                ...messageList.current[_currentChannel],
+                createMessage({
+                  id: uuidv4(),
+                  message: `Unknown command: ${command}`,
+                }, 'SYSTEM'),
+              ]]]),
+            });
             break;
         }
       } else {
@@ -170,15 +201,14 @@ function App() {
 
     if (e.code === 'Enter') {
       if (tagListOpen && onlineUser.filter((u) => u.user !== ip
-      && u.username.startsWith(message.split(' ').pop().slice(1))).length > selectedTag) {
+        && u.username.startsWith(message.split(' ').pop().slice(1))).length > selectedTag) {
         setTagListOpen(false);
         setMessage(
           `${`${message
             .split(' ')
             .slice(0, message.split(' ').length - 1)
-            .join(' ')} @${
-            onlineUser.filter((u) => u.user !== ip
-            && u.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
+            .join(' ')} @${onlineUser.filter((u) => u.user !== ip
+              && u.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
           } `.trim()} `,
         );
         document.getElementById('messageinput').focus();
@@ -187,10 +217,9 @@ function App() {
       if (commandListOpen) {
         setCommandListOpen(false);
         setMessage(
-          `/${
-            commandList.filter(
-              (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
-            )[selectedCommand].name
+          `/${commandList.filter(
+            (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
+          )[selectedCommand].name
           } `,
         );
         document.getElementById('messageinput').focus();
@@ -198,10 +227,9 @@ function App() {
       }
       if (message.split(' ').shift().startsWith('/color') && message.split(' ').length <= 2) {
         setMessage(
-          `/color ${
-            commands.colors.filter(
-              (c) => c.startsWith(message.split(' ').pop().trim()),
-            )[selectedColor].split('-')[0]
+          `/color ${commands.colors.filter(
+            (c) => c.startsWith(message.split(' ').pop().trim()),
+          )[selectedColor].split('-')[0]
           } `,
         );
         document.getElementById('messageinput').focus();
@@ -220,7 +248,7 @@ function App() {
       if (e.code === 'ArrowDown') {
         e.preventDefault();
         if (selectedTag < onlineUser.filter((u) => u.user !== ip
-        && e.username.startsWith(message.split(' ').pop().slice(1))).length - 1) {
+          && e.username.startsWith(message.split(' ').pop().slice(1))).length - 1) {
           setSelectedTag(selectedTag + 1);
         }
       }
@@ -267,6 +295,20 @@ function App() {
     }
   };
 
+  const changeChannel = (channel) => {
+    socket.current.emit('changeChannel', channel);
+    setCurrentChannel(channel);
+    setReplyTo(undefined);
+    setMessage('');
+    setTagListOpen(false);
+    setCommandListOpen(false);
+    setSelectedTag(0);
+    setSelectedCommand(0);
+    setSelectedColor(0);
+    setTypingTimer(undefined);
+    doneTyping();
+  };
+
   const setIsTypingList = (istyping) => {
     isTypingList.current = istyping;
     _setIsTypingList(istyping);
@@ -290,7 +332,7 @@ function App() {
 
   useEffect(() => {
     if (ip && nickname) {
-      const socket = io('http://147.158.248.244:3001');
+      const socket = io('http://147.158.214.241:3001');
       setSocket(socket);
 
       socket.on('connect', () => {
@@ -298,7 +340,8 @@ function App() {
       });
 
       socket.on('message', (message, id, ip, date, nickname, replyTo, type) => {
-        const newMessageList = [...messageList.current];
+        const newMessageList = currentChannel.current
+          ? [...messageList.current[currentChannel.current]] : [];
         if (
           (newMessageList[newMessageList.length - 1]?._ip === ip
               && date - newMessageList[newMessageList.length - 1]?.date < 60)
@@ -326,7 +369,10 @@ function App() {
             nickname,
           ));
         }
-        setMessageList(newMessageList);
+        setMessageList({
+          ...messageList.current,
+          ...Object.fromEntries([[currentChannel.current, newMessageList]]),
+        });
 
         setTimeout(() => {
           document.getElementById('messagebox').scrollTop = document.getElementById('messagebox').scrollHeight;
@@ -339,7 +385,7 @@ function App() {
         const newIsTypingList = [...isTypingList.current];
         if (
           _ip !== ip
-            && newIsTypingList.filter((e) => e.ip === _ip).length === 0
+          && newIsTypingList.filter((e) => e.ip === _ip).length === 0
         ) {
           newIsTypingList.push({ ip: _ip, nickname });
         }
@@ -356,15 +402,22 @@ function App() {
         setOnlineUser(userList);
         if (
           userList.filter((e) => e.user === ip).length > 1
-            && userList.filter((e) => e.user === ip).pop().uuid === uuid
+          && userList.filter((e) => e.user === ip).pop().uuid === uuid
         ) {
           socket.close();
           setShowWarning(true);
         }
       });
+
+      socket.on('listChannels', (channelList) => {
+        setChannels(channelList);
+        setCurrentChannel(channelList[0]);
+        setMessageList(Object.fromEntries(channelList.map((e) => [e, []])));
+      });
+
       return () => socket.close();
     }
-    return () => {};
+    return () => { };
   }, [ip]);
 
   useEffect(() => {
@@ -377,49 +430,73 @@ function App() {
 
   return !showWarning ? (
     <div
-      className={`App w-full h-full relative bg-black text-${currentColor}`}
+      className={`App w-full h-full relative bg-black text-${currentColor} font-['Fira_Code']`}
     >
       <Head>
         <title>SOCKET.IO IRC v0.9</title>
       </Head>
-      <Icon
-        icon="simple-icons:socketdotio"
-        className="w-[90%] h-[90%] opacity-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0"
-      />
-      <div className="flex h-full relative z-50 flex-col p-8 sm:p-16 font-['Fira_Code']">
-        <Header
-          onlineUser={onlineUser}
-        />
-        <MessagesContainer
-          _messageList={_messageList}
-          ip={ip}
-          currentColor={currentColor}
-          setReplyTo={setReplyTo}
-        />
-        <MessageInput
-          currentColor={currentColor}
-          tagListOpen={tagListOpen}
-          commandListOpen={commandListOpen}
-          onlineUser={onlineUser}
-          commands={commandList}
-          message={message}
-          setMessage={setMessage}
-          replyTo={_messageList.map((e) => e.message.map((m) => ({
-            ...m,
-            _ip: e._ip,
-            nickname: e.nickname,
-          }))).flat().filter((e) => e.id === replyTo)?.pop()}
-          setReplyTo={setReplyTo}
-          sendMessage={sendMessage}
-          sendImage={sendImage}
-          ip={ip}
-          selectedTag={selectedTag}
-          selectedCommand={selectedCommand}
-          selectedColor={selectedColor}
-          onMessageKeyDown={onMessageKeyDown}
-          onMessageKeyUp={onMessageKeyUp}
-          _isTypingList={_isTypingList}
-        />
+      <div className="h-full flex">
+        <div className={`h-full border-r-2 border-${currentColor} min-w-[16%]`}>
+          <div className={`flex items-center justify-between border-b-2 border-${currentColor} p-6`}>
+            <div className="flex items-center gap-2 ">
+              <Icon icon="ic:baseline-memory" className="w-6 h-6" />
+              IRC/reactjs
+            </div>
+            <Icon icon="ic:baseline-keyboard-arrow-down" className="w-6 h-6" />
+          </div>
+          <div className="p-6 flex flex-col">
+            {_channels.map((e) => (
+              <button
+                type="button"
+                onClick={() => changeChannel(e)}
+                key={e}
+                className={`flex items-center py-2 gap-1 ${_currentChannel === e ? `border-l-2 pl-2 -ml-2 border-${currentColor}` : ''}`}
+              >
+                <Icon icon="ic:round-tag" className="w-6 h-6" />
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-1 h-full relative z-50 flex-col p-8 sm:p-12 sm:py-10">
+          <Icon
+            icon="simple-icons:socketdotio"
+            className="w-[90%] h-[90%] opacity-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0"
+          />
+          <Header
+            onlineUser={onlineUser}
+          />
+          <MessagesContainer
+            _messageList={_messageList[_currentChannel] || []}
+            ip={ip}
+            currentColor={currentColor}
+            setReplyTo={setReplyTo}
+          />
+          <MessageInput
+            currentColor={currentColor}
+            tagListOpen={tagListOpen}
+            commandListOpen={commandListOpen}
+            onlineUser={onlineUser}
+            commands={commandList}
+            message={message}
+            setMessage={setMessage}
+            replyTo={_messageList[_currentChannel]?.map((e) => e.message.map((m) => ({
+              ...m,
+              _ip: e._ip,
+              nickname: e.nickname,
+            }))).flat().filter((e) => e.id === replyTo)?.pop()}
+            setReplyTo={setReplyTo}
+            sendMessage={sendMessage}
+            sendImage={sendImage}
+            ip={ip}
+            selectedTag={selectedTag}
+            selectedCommand={selectedCommand}
+            selectedColor={selectedColor}
+            onMessageKeyDown={onMessageKeyDown}
+            onMessageKeyUp={onMessageKeyUp}
+            _isTypingList={_isTypingList}
+          />
+        </div>
       </div>
       <Color />
     </div>

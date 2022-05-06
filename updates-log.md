@@ -56,3 +56,7 @@ v0.3
 ---------
 - seperated backend from frontend
 - user can now send images
+
+0.10
+---------
+- basic channel feature added

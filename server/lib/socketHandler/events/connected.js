@@ -2,20 +2,22 @@ const uuidv4 = require('../../utils/uuidv4');
 
 /* eslint-disable no-new-wrappers */
 module.exports = function connectedEvent(ip, nickname, userid) {
-  const { io, user, users } = this;
+  const {
+    io, user, users, channels,
+  } = this;
 
   users.push({
     user: ip,
     username: nickname,
     uuid: userid,
+    channel: channels[0],
   });
 
   user.uuid = userid;
 
-  console.log(users);
-
-  io.to('room1').emit('onlineUser', users);
-  io.to('room1').emit(
+  io.to(channels[0]).emit('onlineUser', users);
+  io.to(channels[0]).emit('listChannels', channels);
+  io.to(channels[0]).emit(
     'message',
     `${nickname} [${ip}] joined the chat`,
     uuidv4(),

@@ -22,39 +22,48 @@ export const colors = [
   'rose-500',
 ];
 
-function clearMessage(setMessageList) {
-  setMessageList([
-    createMessage({
-      id: uuidv4(),
-      message: 'Message cleared',
-    }, 'SYSTEM'),
-  ]);
+function clearMessage(setMessageList, messageList, currentChannel) {
+  setMessageList({
+    ...messageList.current,
+    ...Object.fromEntries([[currentChannel, [
+      createMessage({
+        id: uuidv4(),
+        message: 'Message cleared',
+      }, 'SYSTEM'),
+    ]]]),
+  });
 }
 
-function changeColor(_args, setCurrentColor, setMessageList, messageList) {
+function changeColor(_args, setCurrentColor, setMessageList, messageList, currentChannel) {
   const args = _args.toLowerCase();
   if (args && colors.map((e) => e.split('-').shift()).includes(args)) {
     localStorage.setItem('color', args + (args === 'white' ? '' : '-500'));
     setCurrentColor(args + (args === 'white' ? '' : '-500'));
     setMessageList([
       ...messageList.current,
-      createMessage({
-        id: uuidv4(),
-        message: `You changed your color to ${args}`,
-      }, 'SYSTEM'),
+      ...Object.fromEntries([[currentChannel, [
+        ...messageList.current[currentChannel],
+        createMessage({
+          id: uuidv4(),
+          message: `You changed your color to ${args}`,
+        }, 'SYSTEM'),
+      ]]]),
     ]);
   } else {
     setMessageList([
       ...messageList.current,
-      createMessage({
-        id: uuidv4(),
-        message: args ? `Invalid color: ${args}` : 'No color specified',
-      }, 'SYSTEM'),
+      ...Object.fromEntries([[currentChannel, [
+        ...messageList.current[currentChannel],
+        createMessage({
+          id: uuidv4(),
+          message: args ? `Invalid color: ${args}` : 'No color specified',
+        }, 'SYSTEM'),
+      ]]]),
     ]);
   }
 }
 
-function changeNickname(args, setNickname, socket, setMessageList, messageList) {
+function changeNickname(args, setNickname, socket, setMessageList, messageList, currentChannel) {
   const newNickname = args
     .replace(/[^A-Za-z0-9]/g, '');
   if (newNickname) {
@@ -62,17 +71,20 @@ function changeNickname(args, setNickname, socket, setMessageList, messageList) 
     setNickname(newNickname);
     socket.current.emit('nickname', newNickname);
   } else {
-    setMessageList([
+    setMessageList([[
       ...messageList.current,
-      createMessage({
-        id: uuidv4(),
-        message: 'Invalid nickname',
-      }, 'SYSTEM'),
-    ]);
+      ...Object.fromEntries([currentChannel, [
+        ...messageList.current[currentChannel],
+        createMessage({
+          id: uuidv4(),
+          message: 'Invalid nickname',
+        }, 'SYSTEM'),
+      ]]),
+    ]]);
   }
 }
 
-function exportChat(messageList, setMessageList) {
+function exportChat(messageList, setMessageList, currentChannel) {
   const blob = new Blob([JSON.stringify(messageList.current)], {
     type: 'application/json',
   });
@@ -84,10 +96,13 @@ function exportChat(messageList, setMessageList) {
 
   setMessageList([
     ...messageList.current,
-    createMessage({
-      id: uuidv4(),
-      message: 'Chat messages exported',
-    }, 'SYSTEM'),
+    Object.entries([[currentChannel, [
+      ...messageList.current[currentChannel],
+      createMessage({
+        id: uuidv4(),
+        message: 'Chat messages exported',
+      }, 'SYSTEM'),
+    ]]]),
   ]);
 }
 
