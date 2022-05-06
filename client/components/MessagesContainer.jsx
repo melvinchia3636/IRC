@@ -11,7 +11,7 @@ export default function MessagesContainer({
   setReplyTo,
 }) {
   return (
-    <div className="flex-1 overflow-y-auto" id="messagebox">
+    <div className="flex-1 overflow-y-auto relative z-50" id="messagebox">
       {_messageList.map(({
         _ip, message, date, nickname,
       }) => (

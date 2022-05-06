@@ -38,7 +38,7 @@ module.exports = function socketHandler(socket) {
   }));
   socket.on('typing', typingEvent.bind({ io, users }));
   socket.on('stopTyping', (ip) => {
-    io.to('room1').emit('stopTyping', ip);
+    io.emit('stopTyping', ip);
   });
   socket.on('changeChannel', (channel) => {
     socket.leave(users.filter((e) => e.uuid === user.uuid)[0].channel);

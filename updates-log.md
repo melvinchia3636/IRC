@@ -60,3 +60,4 @@ v0.3
 0.10
 ---------
 - basic channel feature added
+- improved layout of the command palette

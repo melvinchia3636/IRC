@@ -433,7 +433,7 @@ function App() {
       className={`App w-full h-full relative bg-black text-${currentColor} font-['Fira_Code']`}
     >
       <Head>
-        <title>SOCKET.IO IRC v0.9</title>
+        <title>SOCKET.IO IRC v0.10</title>
       </Head>
       <div className="h-full flex">
         <div className={`h-full border-r-2 border-${currentColor} min-w-[16%]`}>

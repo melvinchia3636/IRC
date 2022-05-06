@@ -118,11 +118,14 @@ function CommandList({
                 && 'border-b-2'
             } border-${currentColor}`}
           >
-            <span className="block">
-              /
-              {name}
-            </span>
-            <span className="block">{description}</span>
+            <div className="text-left">
+              <div className="block">
+                /
+                {name}
+              </div>
+              <div className="text-xs">{description}</div>
+            </div>
+            <span className="block text-xs">Built-in</span>
           </button>
         ))}
     </div>
@@ -191,13 +194,13 @@ export default function MessageInpput({
   _isTypingList,
 }) {
   return (
-    <div className="mt-4">
+    <div className="mt-4 relative z-50">
       <div className={`flex-1 flex items-center border-2 rounde-sm border-${currentColor}`}>
         <div className={`overflow-hidden transition-all flex items-center ${message ? 'w-0' : 'w-20'}`}>
           <button type="button" onClick={sendImage} className="ml-4">
             <Icon icon="ic:outline-image" className="w-6 h-6" />
           </button>
-          <button type="button" onClick={sendImage} className="ml-3">
+          <button type="button" onClick={sendImage} className="ml-3 relative z-50">
             <Icon icon="ic:outline-attach-file" className="w-6 h-6" />
           </button>
         </div>

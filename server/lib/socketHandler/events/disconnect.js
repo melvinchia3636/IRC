@@ -17,8 +17,8 @@ module.exports = function disconnectEvent() {
     'SYSTEM',
     new Number(new Date()) / 1000,
   );
-  io.to('room1').emit('stopTyping', u.user);
+  io.emit('stopTyping', u.user);
   removeUser(user.uuid);
-  io.to('room1').emit('onlineUser', users);
+  io.emit('onlineUser', users);
   console.log(`${u.user} left the chat`);
 };
