@@ -1,4 +1,4 @@
-module.exports = function imageMessageEvent(msg, id, ip, date, username, replyTo) {
+module.exports = function imageMessageEvent(msg, id, ip, date) {
   const u = this.users.filter((e) => e.uuid === this.user.uuid).pop();
-  this.io.to(u.channel).emit('message', msg, id, ip, date, username, replyTo, 'image');
+  this.io.emit('message', msg, id, ip, date, u.username, 'image', u.channel);
 };

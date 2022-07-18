@@ -16,6 +16,9 @@ module.exports = function disconnectEvent() {
     uuidv4(),
     'SYSTEM',
     new Number(new Date()) / 1000,
+    null,
+    'text',
+    'general',
   );
   io.emit('stopTyping', u.user);
   removeUser(user.uuid);

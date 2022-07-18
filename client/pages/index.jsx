@@ -1,3 +1,5 @@
+/* eslint-disable no-use-before-define */
+/* eslint-disable no-param-reassign */
 /* eslint-disable no-case-declarations */
 /* eslint-disable react/prop-types */
 /* eslint-disable no-shadow */
@@ -12,15 +14,10 @@ import publicIp from 'public-ip';
 import { Icon } from '@iconify/react';
 import Head from 'next/head';
 import Compress from 'compress.js';
-import alertSound from '../public/alert.mp3';
 import uuidv4 from '../misc/uuidv4';
 import MessageInput from '../components/MessageInput';
 import MessagesContainer from '../components/MessagesContainer';
 import Header from '../components/Header';
-import Color from '../misc/colors';
-import createMessage from '../misc/createMessage';
-import * as commands from '../misc/command';
-import commandList from '../misc/commandList';
 
 const compress = new Compress();
 
@@ -28,8 +25,8 @@ async function resizeImageFn(file) {
   const resizedImage = await compress.compress([file], {
     size: 10, // the max size in MB, defaults to 2MB
     quality: 1, // the quality of the image, max is 1,
-    maxWidth: 500, // the max width of the output image, defaults to 1920px
-    maxHeight: 500, // the max height of the output image, defaults to 1920px
+    maxWidth: 300, // the max width of the output image, defaults to 1920px
+    maxHeight: 300, // the max height of the output image, defaults to 1920px
     resize: true,
   });
   const img = resizedImage[0];
@@ -44,28 +41,22 @@ function App() {
 
   const [onlineUser, setOnlineUser] = useState([]);
   const [_channels, _setChannels] = useState([]);
-  const channels = useRef();
+  const [_hasNewMessageChannels, _setHasNewMessageChannels] = useState([]);
+  const channels = useRef(_channels);
+  const hasNewMessageChannels = useRef(_hasNewMessageChannels);
   const messageList = useRef(_messageList);
   const isTypingList = useRef(_isTypingList);
   const socket = useRef(_socket);
+
   const [message, setMessage] = useState('');
-  const [replyTo, setReplyTo] = useState('');
 
   const [ip, setIP] = useState('');
   const [uuid] = useState(uuidv4());
-  const [nickname, setNickname] = useState();
-  const [currentColor, setCurrentColor] = useState();
   const [_currentChannel, _setCurrentChannel] = useState(null);
   const currentChannel = useRef();
 
-  const [selectedTag, setSelectedTag] = useState(0);
-  const [selectedCommand, setSelectedCommand] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(0);
-
-  const [showWarning, setShowWarning] = useState(false);
-
   const [tagListOpen, setTagListOpen] = useState(false);
-  const [commandListOpen, setCommandListOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState(0);
 
   const [typingTimer, setTypingTimer] = useState();
   const doneTypingInterval = 2000;
@@ -89,74 +80,25 @@ function App() {
     _setChannels(channellist);
   };
 
+  const setHasNewMessageChannels = (hnms) => {
+    hasNewMessageChannels.current = hnms;
+    _setHasNewMessageChannels(hnms);
+  };
+
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim()) {
-      if (message.startsWith('/')) {
-        const command = message.split(' ')[0];
-        const args = message.trim().split(' ').slice(1).join(' ');
-
-        switch (command) {
-          case '/clear':
-            commands.clearMessage(setMessageList, messageList, _currentChannel);
-            break;
-
-          case '/nick':
-            commands.changeNickname(
-              args,
-              setNickname,
-              socket,
-              setMessageList,
-              messageList,
-              _currentChannel,
-            );
-            break;
-
-          case '/color':
-            commands.changeColor(
-              args,
-              setCurrentColor,
-              setMessageList,
-              messageList,
-              createMessage,
-              _currentChannel,
-            );
-            break;
-
-          case '/export':
-            commands.exportChat(messageList, setMessageList, createMessage, _currentChannel);
-            break;
-
-          default:
-            setMessageList({
-              ...messageList.current,
-              ...Object.fromEntries([[_currentChannel, [
-                ...messageList.current[_currentChannel],
-                createMessage({
-                  id: uuidv4(),
-                  message: `Unknown command: ${command}`,
-                }, 'SYSTEM'),
-              ]]]),
-            });
-            break;
-        }
-      } else {
-        socket.current.emit(
-          'message',
-          message.trim(),
-          uuidv4(),
-          ip,
-          new Number(new Date()) / 1000,
-          nickname,
-          replyTo,
-        );
-      }
-
+      socket.current.emit(
+        'message',
+        message.trim(),
+        uuidv4(),
+        ip,
+        new Number(new Date()) / 1000,
+      );
       setTimeout(() => {
         document.getElementById('messagebox').scrollTop = document.getElementById('messagebox').scrollHeight;
       }, 100);
 
-      setReplyTo(undefined);
       setMessage('');
       doneTyping();
     }
@@ -179,8 +121,6 @@ function App() {
           uuidv4(),
           ip,
           new Number(new Date()) / 1000,
-          nickname,
-          replyTo,
         );
       });
     };
@@ -200,41 +140,6 @@ function App() {
     socket.current.emit('typing', uuid);
 
     if (e.code === 'Enter') {
-      if (tagListOpen && onlineUser.filter((u) => u.user !== ip
-        && u.username.startsWith(message.split(' ').pop().slice(1))).length > selectedTag) {
-        setTagListOpen(false);
-        setMessage(
-          `${`${message
-            .split(' ')
-            .slice(0, message.split(' ').length - 1)
-            .join(' ')} @${onlineUser.filter((u) => u.user !== ip
-              && u.username.startsWith(message.split(' ').pop().slice(1)))[selectedTag].username
-          } `.trim()} `,
-        );
-        document.getElementById('messageinput').focus();
-        return;
-      }
-      if (commandListOpen) {
-        setCommandListOpen(false);
-        setMessage(
-          `/${commandList.filter(
-            (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
-          )[selectedCommand].name
-          } `,
-        );
-        document.getElementById('messageinput').focus();
-        return;
-      }
-      if (message.split(' ').shift().startsWith('/color') && message.split(' ').length <= 2) {
-        setMessage(
-          `/color ${commands.colors.filter(
-            (c) => c.startsWith(message.split(' ').pop().trim()),
-          )[selectedColor].split('-')[0]
-          } `,
-        );
-        document.getElementById('messageinput').focus();
-        return;
-      }
       sendMessage(e);
     }
 
@@ -247,66 +152,43 @@ function App() {
       }
       if (e.code === 'ArrowDown') {
         e.preventDefault();
-        if (selectedTag < onlineUser.filter((u) => u.user !== ip
-          && e.username.startsWith(message.split(' ').pop().slice(1))).length - 1) {
+        if (
+          selectedTag
+          < onlineUser.filter((u) => u.uuid !== uuid).length - 1
+        ) {
           setSelectedTag(selectedTag + 1);
         }
       }
-    }
-
-    if (commandListOpen) {
-      if (e.code === 'ArrowUp') {
-        e.preventDefault();
-        if (selectedCommand > 0) {
-          setSelectedCommand(selectedCommand - 1);
-        }
+      if (
+        e.code === 'Tab'
+        && onlineUser.filter((u) => u.uuid !== uuid).length > selectedTag
+      ) {
+        setTagListOpen(false);
+        setMessage(
+          `${`${message
+            .split(' ')
+            .slice(0, message.split(' ').length - 1)
+            .join(' ')} @${
+            onlineUser.filter((u) => u.uuid !== uuid)[selectedTag].username
+            || onlineUser.filter((u) => u.uuid !== uuid)[selectedTag].user
+          } `.trim()} `,
+        );
+        document.getElementById('messageinput').focus();
       }
-      if (e.code === 'ArrowDown') {
-        e.preventDefault();
-        if (selectedCommand < commandList.filter(
-          (e) => e.name.startsWith(message.split(' ').pop().slice(1)),
-        ).length - 1) {
-          setSelectedCommand(selectedCommand + 1);
-        }
-      }
-    }
-
-    if (message.split(' ').shift().startsWith('/color')) {
-      if (e.code === 'ArrowUp') {
-        e.preventDefault();
-        if (selectedColor > 0) {
-          setSelectedColor(selectedColor - 1);
-        }
-      }
-      if (e.code === 'ArrowDown') {
-        e.preventDefault();
-        if (selectedColor < commands.colors.filter(
-          (e) => e.startsWith(message.split(' ').pop().trim()),
-        ).length - 1) {
-          setSelectedColor(selectedColor + 1);
-        }
-      }
-      document.getElementById(`color-select-${commands.colors.filter(
-        (c) => c.startsWith(message.split(' ').pop().trim()),
-      )[selectedColor]}`)?.scrollIntoView({
-        block: 'center',
-        inline: 'center',
-      });
     }
   };
 
   const changeChannel = (channel) => {
     socket.current.emit('changeChannel', channel);
     setCurrentChannel(channel);
-    setReplyTo(undefined);
     setMessage('');
     setTagListOpen(false);
-    setCommandListOpen(false);
     setSelectedTag(0);
-    setSelectedCommand(0);
-    setSelectedColor(0);
     setTypingTimer(undefined);
     doneTyping();
+    setHasNewMessageChannels(
+      _hasNewMessageChannels.filter((c) => c !== channel),
+    );
   };
 
   const setIsTypingList = (istyping) => {
@@ -324,61 +206,94 @@ function App() {
     setIP(ipres);
   };
 
+  function updateCharWidth() {
+    const containerWidth = document.querySelector(
+      '#messagebox table tr td:last-child',
+    )?.clientWidth;
+    const charWidth = document.querySelector('#placeholder')?.clientWidth;
+    if (containerWidth && charWidth) {
+      const maxFittableChar = Math.ceil(containerWidth / charWidth);
+
+      const newMessageList = [
+        ...(messageList.current[currentChannel.current] || []),
+      ];
+      newMessageList.forEach((e) => {
+        if (e.type === 'text') {
+          if (typeof e.message !== 'string') {
+            e.message = e.message.join('');
+          }
+          e.message = e.message.match(
+            new RegExp(`.{1,${maxFittableChar - 7}}`, 'g'),
+          );
+        }
+      });
+
+      setMessageList({
+        ...messageList.current,
+        [currentChannel.current]: newMessageList,
+      });
+    }
+  }
+
   useEffect(() => {
-    setNickname(localStorage.getItem('nickname') || 'Anonymous');
-    setCurrentColor(localStorage.getItem('color') || 'green-500');
     getData();
   }, []);
 
   useEffect(() => {
-    if (ip && nickname) {
-      const socket = io('http://147.158.214.241:3001');
+    if (ip) {
+      const socket = io('http://147.158.217.33:3001/');
       setSocket(socket);
 
       socket.on('connect', () => {
-        socket.emit('connected', ip, nickname, uuid);
+        socket.emit('connected', ip, '', uuid);
       });
 
-      socket.on('message', (message, id, ip, date, nickname, replyTo, type) => {
-        const newMessageList = currentChannel.current
-          ? [...messageList.current[currentChannel.current]] : [];
-        if (
-          (newMessageList[newMessageList.length - 1]?._ip === ip
-              && date - newMessageList[newMessageList.length - 1]?.date < 60)
-            || (ip === 'SYSTEM'
-              && newMessageList[newMessageList.length - 1]?._ip === ip)
-        ) {
-          newMessageList[newMessageList.length - 1].message = [
-            ...newMessageList[newMessageList.length - 1].message,
-            {
-              id,
-              message,
-              replyTo,
-              type,
-            },
-          ];
-        } else {
-          newMessageList.push(createMessage(
-            {
-              id,
-              message,
-              replyTo,
-              type,
-            },
-            ip,
-            nickname,
-          ));
-        }
-        setMessageList({
-          ...messageList.current,
-          ...Object.fromEntries([[currentChannel.current, newMessageList]]),
+      socket.on('message', (message, id, ip, date, nickname, type, channel) => {
+        const newMessageList = [...(messageList.current[channel] || [])];
+
+        newMessageList.push({
+          id,
+          message,
+          type,
+          ip,
+          nickname,
+          date,
         });
+
+        setTimeout(() => {
+          updateCharWidth();
+        }, 50);
+
+        if (channel) {
+          setMessageList({
+            ...messageList.current,
+            ...Object.fromEntries([[channel, newMessageList]]),
+          });
+          if (
+            currentChannel.current !== channel
+            && !hasNewMessageChannels.current.includes(channel)
+          ) {
+            setHasNewMessageChannels([
+              ...hasNewMessageChannels.current,
+              channel,
+            ]);
+          }
+        } else {
+          setMessageList(
+            Object.fromEntries(
+              Object.entries(messageList.current).map(
+                ([channel, messageList]) => [
+                  channel,
+                  [...messageList, ...newMessageList],
+                ],
+              ),
+            ),
+          );
+        }
 
         setTimeout(() => {
           document.getElementById('messagebox').scrollTop = document.getElementById('messagebox').scrollHeight;
         }, 100);
-
-        new Audio(alertSound).play();
       });
 
       socket.on('typing', (_ip, nickname) => {
@@ -400,44 +315,44 @@ function App() {
 
       socket.on('onlineUser', (userList) => {
         setOnlineUser(userList);
-        if (
-          userList.filter((e) => e.user === ip).length > 1
-          && userList.filter((e) => e.user === ip).pop().uuid === uuid
-        ) {
-          socket.close();
-          setShowWarning(true);
-        }
+        setTimeout(() => {
+          updateCharWidth();
+        }, 100);
       });
 
       socket.on('listChannels', (channelList) => {
         setChannels(channelList);
         setCurrentChannel(channelList[0]);
-        setMessageList(Object.fromEntries(channelList.map((e) => [e, []])));
+        setMessageList(
+          Object.fromEntries(
+            channelList.map((e) => [e, messageList.current[e] || []]),
+          ),
+        );
       });
 
       return () => socket.close();
     }
-    return () => { };
+
+    window.addEventListener('resize', (event) => {
+      updateCharWidth();
+    });
+
+    return () => {};
   }, [ip]);
 
   useEffect(() => {
     setTagListOpen(message && message.split(' ').pop().startsWith('@'));
-    setCommandListOpen(message.split(' ').length === 1 && message.split(' ').shift().startsWith('/'));
     setSelectedTag(0);
-    setSelectedCommand(0);
-    setSelectedColor(0);
   }, [message]);
 
-  return !showWarning ? (
-    <div
-      className={`App w-full h-full relative bg-black text-${currentColor} font-['Fira_Code']`}
-    >
+  return (
+    <div className="App w-full h-full relative bg-[#19192c] text-[#dadbdf] font-['Jetbrains_Mono'] text-sm font-light">
       <Head>
         <title>SOCKET.IO IRC v0.10</title>
       </Head>
       <div className="h-full flex">
-        <div className={`h-full border-r-2 border-${currentColor} min-w-[16%]`}>
-          <div className={`flex items-center justify-between border-b-2 border-${currentColor} p-6`}>
+        <div className="h-full border-r border-[#605F5F] min-w-[16%]">
+          <div className="flex items-center justify-between border-b border-[#605F5F] p-6">
             <div className="flex items-center gap-2 ">
               <Icon icon="ic:baseline-memory" className="w-6 h-6" />
               IRC/reactjs
@@ -450,64 +365,54 @@ function App() {
                 type="button"
                 onClick={() => changeChannel(e)}
                 key={e}
-                className={`flex items-center py-2 gap-1 ${_currentChannel === e ? `border-l-2 pl-2 -ml-2 border-${currentColor}` : ''}`}
+                className={`flex items-center justify-between py-2 gap-1 ${
+                  _currentChannel === e
+                    ? 'border-l-2 pl-2 -ml-2 border-[#dadbdf]'
+                    : ''
+                }`}
               >
-                <Icon icon="ic:round-tag" className="w-6 h-6" />
-                {e}
+                <div className="flex items-center">
+                  <Icon icon="ic:round-tag" className="w-6 h-6" />
+                  {e}
+                </div>
+                {_hasNewMessageChannels.includes(e) && (
+                  <div className="w-1.5 h-1.5 bg-[#dadbdf] rounded-full" />
+                )}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex flex-1 h-full relative z-50 flex-col p-8 sm:p-12 sm:py-10">
-          <Icon
-            icon="simple-icons:socketdotio"
-            className="w-[90%] h-[90%] opacity-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0"
-          />
-          <Header
-            onlineUser={onlineUser}
-          />
+        <div className="flex flex-1 h-full relative z-50 flex-col ">
+          <Header onlineUser={onlineUser} />
           <MessagesContainer
             _messageList={_messageList[_currentChannel] || []}
             ip={ip}
-            currentColor={currentColor}
-            setReplyTo={setReplyTo}
+            selfUUID={uuid}
           />
           <MessageInput
-            currentColor={currentColor}
             tagListOpen={tagListOpen}
-            commandListOpen={commandListOpen}
             onlineUser={onlineUser}
-            commands={commandList}
             message={message}
             setMessage={setMessage}
-            replyTo={_messageList[_currentChannel]?.map((e) => e.message.map((m) => ({
-              ...m,
-              _ip: e._ip,
-              nickname: e.nickname,
-            }))).flat().filter((e) => e.id === replyTo)?.pop()}
-            setReplyTo={setReplyTo}
             sendMessage={sendMessage}
             sendImage={sendImage}
             ip={ip}
+            uuid={uuid}
             selectedTag={selectedTag}
-            selectedCommand={selectedCommand}
-            selectedColor={selectedColor}
             onMessageKeyDown={onMessageKeyDown}
             onMessageKeyUp={onMessageKeyUp}
             _isTypingList={_isTypingList}
           />
         </div>
+        <div className="w-1/6 h-full border-l border-[#605F5F] p-6 flex flex-col gap-2">
+          {onlineUser.map(({ username, user }) => (
+            <div className="break-all">{username || user}</div>
+          ))}
+        </div>
       </div>
-      <Color />
-    </div>
-  ) : (
-    <div
-      className={`App font-["Jetbrains_Mono"] w-full h-full flex items-center justify-center relative bg-black text-${currentColor}`}
-    >
-      <p className="text-center p-8">
-        You&apos;re not allowed to join the chat with the same IP multiple times.
-      </p>
-      <Color />
+      <div id="placeholder" className="absolute top-0 left-0 opacity-0">
+        .
+      </div>
     </div>
   );
 }

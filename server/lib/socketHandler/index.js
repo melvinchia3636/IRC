@@ -3,7 +3,6 @@
 const messageEvent = require('./events/message');
 const imageMessageEvent = require('./events/imageMessage');
 const connectedEvent = require('./events/connected');
-const nicknameChangeEvent = require('./events/nicknameChange');
 const disconnectEvent = require('./events/disconnect');
 const typingEvent = require('./events/typing');
 
@@ -32,7 +31,6 @@ module.exports = function socketHandler(socket) {
   socket.on('connected', connectedEvent.bind({
     io, user, users, channels,
   }));
-  socket.on('nickname', nicknameChangeEvent.bind({ io, user, users }));
   socket.on('disconnect', disconnectEvent.bind({
     io, user, users, removeUser,
   }));
@@ -41,8 +39,6 @@ module.exports = function socketHandler(socket) {
     io.emit('stopTyping', ip);
   });
   socket.on('changeChannel', (channel) => {
-    socket.leave(users.filter((e) => e.uuid === user.uuid)[0].channel);
     users.filter((e) => e.uuid === user.uuid)[0].channel = channel;
-    socket.join(channel);
   });
 };

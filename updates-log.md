@@ -61,3 +61,4 @@ v0.3
 ---------
 - basic channel feature added
 - improved layout of the command palette
+- users will now receive messages and get notification from other channels
